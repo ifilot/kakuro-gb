@@ -102,11 +102,6 @@ void puzzle_load(uint8_t k)
         }
 }
 
-uint8_t inner_index(uint8_t i)
-{
-    return (i / n - 1) * (n - 1) + i % n - 1;
-}
-
 uint16_t run_digits(uint8_t head, uint8_t step, uint8_t len)
 {
     uint16_t seen = 0;

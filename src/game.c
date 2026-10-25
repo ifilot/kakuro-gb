@@ -3,8 +3,10 @@
  *
  * Buttons on the board: the D-pad moves the cursor to the nearest white
  * cell in that direction, A opens the keypad, B wipes the cell, SELECT shows
- * the combinations and START the pause menu. Every change is saved at once;
- * the clock is saved every second once the puzzle has been touched.
+ * the combinations and START the pause menu. Nothing of a puzzle is kept
+ * when it is left unsolved (the cartridge has no battery RAM): quitting
+ * asks first. A solved puzzle shows for a moment, then the overview comes
+ * in on a wave; from there A opens the next puzzle and B the puzzle grid.
  */
 #include <gb/gb.h>
 #include "game.h"
@@ -15,16 +17,18 @@
 #include "panel.h"
 #include "puzzle.h"
 #include "puzzles.h"
-#include "save.h"
+#include "best.h"
 #include "sound.h"
 #include "video.h"
+#include "wave.h"
 
 #define HINT_PENALTY 30                     /* seconds */
 #define NOTE_FRAMES  150
+#define SOLVED_FRAMES 60                    /* the solved board shows this long */
 
-enum { M_BOARD, M_KEYPAD, M_INFO, M_PAUSE, M_SOLVED };
+enum { M_BOARD, M_KEYPAD, M_INFO, M_PAUSE, M_QUIT, M_SOLVED };
 
-static uint8_t state, touched, note_time, choice;
+static uint8_t state, note_time, choice;
 
 /* The first white cell without a digit, else the first one not given. */
 static uint8_t first_open(void)
@@ -41,12 +45,8 @@ static uint8_t first_open(void)
 
 static void start_puzzle(void)
 {
-    uint16_t seconds;
     screen_off();
     puzzle_load(current);
-    seconds = save_restore(current);
-    touched = save_started(current);
-    save_set_last(current);
     cur = first_open();
     board_setup();
     panel_setup();
@@ -54,7 +54,7 @@ static void start_puzzle(void)
     state = M_BOARD;
     note_time = 0;
     screen_on();
-    clock_start(seconds);
+    clock_start(0);
 }
 
 static void note(const char *text)
@@ -66,20 +66,29 @@ static void note(const char *text)
 static void solved(void)
 {
     uint16_t seconds, best;
-    uint8_t record;
+    uint8_t record, k;
     clock_running = 0;
     seconds = clock_now();
     if (!seconds)
         seconds = 1;
-    best = save_best(current);
+    best = best_time(current);
     record = !best || seconds < best;
     if (record)
-        save_set_best(current, seconds);
-    save_clear(current);
-    touched = 0;
+        best_set(current, seconds);
     sfx(SFX_SOLVED);
     board_cursor(0);
-    panel_solved(seconds, best, record);
+    status_note("SOLVED!");
+    note_time = 0;
+    for (k = 0; k < SOLVED_FRAMES; k++)
+        frame();
+    panel_slide(PANEL_HIDDEN);
+    while (panel_moving()) {
+        frame();
+        panel_update();
+    }
+    panel_overview(current, seconds, best, record);
+    wave_in();
+    input_flush();
     state = M_SOLVED;
 }
 
@@ -101,11 +110,6 @@ static void put_digit(uint8_t d)
         empty++;
     cell[cur] = CELL_WHITE | d;
     board_draw_cell(cur);
-    save_cell(current, cur, d);
-    if (!touched) {
-        touched = 1;
-        save_time(current, clock_now());
-    }
     if (!empty) {
         if (puzzle_solved()) {
             solved();
@@ -163,8 +167,6 @@ static void restart(void)
             empty++;
             board_draw_cell(i);
         }
-    save_clear(current);
-    touched = 0;
     cur = first_open();
     clock_start(0);
     status_draw();
@@ -201,8 +203,6 @@ uint8_t game_play(void)
         if (clock_changed) {
             clock_changed = 0;
             status_time();
-            if (touched)
-                save_time(current, clock_now());
         }
         if (note_time && !--note_time)
             status_draw();
@@ -276,24 +276,45 @@ uint8_t game_play(void)
                     close_panel();
                     restart();
                     break;
-                case PAUSE_QUIT:
-                    clock_running = 0;
-                    if (touched)
-                        save_time(current, clock_now());
-                    return SCREEN_GRID;
+                case PAUSE_MUSIC:                   /* stays in the menu */
+                    music_enable(!music_enabled());
+                    panel_pause_music();
+                    break;
+                case PAUSE_QUIT:                    /* asks first */
+                    panel_quit();
+                    choice = QUIT_KEEP;
+                    state = M_QUIT;
+                    break;
                 }
             }
             break;
 
+        case M_QUIT:
+            if (repeated & (J_UP | J_DOWN)) {
+                choice ^= 1;
+                panel_quit_choice(choice);
+                sfx(SFX_MOVE);
+            } else if ((pressed & J_B) || ((pressed & (J_A | J_START)) && choice == QUIT_KEEP)) {
+                sfx(SFX_ERASE);                     /* back to the pause menu */
+                panel_pause();
+                choice = PAUSE_QUIT;
+                panel_pause_choice(choice);
+                state = M_PAUSE;
+            } else if (pressed & (J_A | J_START)) {
+                sfx(SFX_SELECT);
+                return SCREEN_GRID;
+            }
+            break;
+
         case M_SOLVED:
-            if (panel_moving())
-                break;
             if (pressed & (J_A | J_START)) {
                 current = current + 1 < PUZZLE_COUNT ? current + 1 : 0;
                 return SCREEN_GAME;
             }
-            if (pressed & J_B)
+            if (pressed & J_B) {
+                sfx(SFX_ERASE);
                 return SCREEN_GRID;
+            }
             break;
         }
     }

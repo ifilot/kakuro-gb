@@ -1,5 +1,8 @@
-# Build products (ROM, objects, maps, screenshots, battery RAM from make run)
+# Build products (ROM, objects, maps, screenshots, the music as a WAV)
 build/
+
+# The website (make site)
+_site/
 
 # Python
 __pycache__/

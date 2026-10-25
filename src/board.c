@@ -1,12 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* board.c -- drawing the board, the view and the sprites.
+/* board.c -- drawing the board, centred on the screen, and the sprites.
  *
- * Map coordinates: the left half of cell column c is map column 2c-1, so
- * column 0 has only its right half at map column 0; rows likewise. The rest
+ * Map coordinates: cell (r, c) is at map column 2c, row 2r. The rest
  * of the 32x32 map is black, which is what the screen shows around a board
  * smaller than the screen.
  *
- * Sprites 0-3 are the cursor's corners, 4-13 the keypad keys. */
+ * On the Color a cell keeps its palette: sums CPAL_CLUE, white cells
+ * CPAL_CELL, given digits CPAL_GIVEN; the digit tiles are the Color's own,
+ * with the digit in a colour apart from the grid line.
+ *
+ * Sprites 0-3 are the cursor's corners, 4-13 the keypad keys, 14-21 the
+ * keypad's edges. */
 #include <gb/gb.h>
 #include "board.h"
 #include "puzzle.h"
@@ -15,12 +19,15 @@
 
 #define SPR_CURSOR 0
 #define SPR_KEYS   4
-#define KEY_PITCH  7                        /* keys overlap by their 1-dot border */
+#define SPR_EDGES  14
+#define EDGES      8
+#define KEY_PITCH  8                        /* keys share the line between them */
+#define PAD_W      (3 * KEY_PITCH + 1)      /* the keypad in dots, with its edges */
+#define PAD_H      (4 * KEY_PITCH + 1)
 
 uint8_t cur;
 uint8_t key;
 
-static uint8_t board_px;                    /* the board's width and height in dots */
 static int16_t view_x, view_y;              /* the map dot at the screen's top-left corner */
 static int16_t cur_x, cur_y;                /* where the cursor is drawn (map dots) */
 static uint8_t cursor_on, pulse;
@@ -49,16 +56,7 @@ static void draw_at(uint8_t i, uint8_t r, uint8_t c)
 {
     uint8_t q[4];
     cell_tiles(i, q);
-    if (r && c)
-        set_bkg_tiles(2 * c - 1, 2 * r - 1, 2, 2, q);
-    else if (r) {                           /* column 0: the right half */
-        set_bkg_tiles(0, 2 * r - 1, 1, 1, q + 1);
-        set_bkg_tiles(0, 2 * r, 1, 1, q + 3);
-    }
-    else if (c)                             /* row 0: the lower half */
-        set_bkg_tiles(2 * c - 1, 0, 2, 1, q + 2);
-    else
-        set_bkg_tiles(0, 0, 1, 1, q + 3);
+    set_bkg_tiles(2 * c, 2 * r, 2, 2, q);
 }
 
 void board_draw_cell(uint8_t i)
@@ -66,41 +64,8 @@ void board_draw_cell(uint8_t i)
     draw_at(i, i / n, i % n);
 }
 
-static int16_t target_x(void) { return (int16_t)(cur % n) * 16 - 8; }
-static int16_t target_y(void) { return (int16_t)(cur / n) * 16 - 8; }
-
-/* The view row that keeps the cursor's cell in sight (tall boards only). */
-static int16_t view_target(void)
-{
-    int16_t y;
-    if (board_px <= VIEW_H)
-        return -(int16_t)(VIEW_H - board_px) / 2;
-    y = target_y() + 8 - VIEW_H / 2;
-    if (y < 0)
-        y = 0;
-    if (y > board_px - VIEW_H)
-        y = board_px - VIEW_H;
-    return y;
-}
-
-void board_setup(void)
-{
-    uint8_t i = 0, r, c, k;
-    vram_tiles(0, GAME_TILE_COUNT, game_tiles);
-    fill_bkg_rect(0, 0, 32, 32, T_BLACK);
-    for (r = 0; r < n; r++)
-        for (c = 0; c < n; c++, i++)
-            draw_at(i, r, c);
-    board_px = (2 * n - 1) * 8;
-    view_x = -(int16_t)(160 - board_px) / 2;
-    for (k = 0; k < 4; k++) {
-        set_sprite_tile(SPR_CURSOR + k, S_CORNER);
-        set_sprite_prop(SPR_CURSOR + k, (k & 1 ? S_FLIPX : 0) | (k & 2 ? S_FLIPY : 0));
-    }
-    keypad_close();
-    board_cursor(1);
-    board_snap();
-}
+static int16_t target_x(void) { return (int16_t)(cur % n) * 16; }
+static int16_t target_y(void) { return (int16_t)(cur / n) * 16; }
 
 /* One step of a glide: half the way, at least one dot. */
 static int16_t glide(int16_t from, int16_t to)
@@ -131,22 +96,17 @@ static void place_sprites(void)
 
 void board_update(void)
 {
-    int16_t ty = view_target();
     pulse++;
-    if (view_y != ty)
-        view_y += view_y < ty ? 2 : -2;     /* targets are even, so this lands */
     cur_x = glide(cur_x, target_x());
     cur_y = glide(cur_y, target_y());
-    move_bkg((uint8_t)view_x, (uint8_t)view_y);
     place_sprites();
 }
 
-void board_snap(void)
+/* The cursor straight to its cell. */
+static void board_snap(void)
 {
-    view_y = view_target();
     cur_x = target_x();
     cur_y = target_y();
-    move_bkg((uint8_t)view_x, (uint8_t)view_y);
     place_sprites();
 }
 
@@ -161,13 +121,51 @@ void board_cursor(uint8_t visible)
             hide_sprite(SPR_CURSOR + k);
 }
 
-/* Keypad: keys 1-9 in three rows, the erase key under 8. */
+void board_setup(void)
+{
+    uint8_t i = 0, r, c, k;
+    vram_tiles(0, GAME_TILE_COUNT, game_tiles);
+    if (cgb)
+        vram_tiles(T_DIGIT, CGB_CELL_COUNT, cgb_cell_tiles);
+    fill_bkg_rect(0, 0, 32, 32, T_BLACK);
+    attr_bkg(0, 0, 32, 32, CPAL_PAPER);
+    for (r = 0; r < n; r++)
+        for (c = 0; c < n; c++, i++) {
+            draw_at(i, r, c);
+            attr_bkg(2 * c, 2 * r, 2, 2, !(cell[i] & CELL_WHITE) ? CPAL_CLUE
+                     : (cell[i] & CELL_FIXED) ? CPAL_GIVEN : CPAL_CELL);
+        }
+    view_x = -(int16_t)(160 - n * 16) / 2;
+    view_y = -(int16_t)(VIEW_H - n * 16) / 2;
+    move_bkg((uint8_t)view_x, (uint8_t)view_y);
+    for (k = 0; k < 4; k++) {
+        set_sprite_tile(SPR_CURSOR + k, S_CORNER);
+        set_sprite_prop(SPR_CURSOR + k, (k & 1 ? S_FLIPX : 0) | (k & 2 ? S_FLIPY : 0));
+    }
+    keypad_close();
+    board_cursor(1);
+    board_snap();
+}
+
+/* Keypad: keys 1-9 in three rows, the erase key under 8. A key's tile
+ * has the line along its top and left; the edges close the rest: per edge
+ * its place in keys (column, row) and its tile (S_EDGE + down, across,
+ * both, dot). */
+static const uint8_t edges[EDGES][3] = {
+    { 3, 0, 0 }, { 3, 1, 0 }, { 3, 2, 0 },  /* right of 3, 6, 9 */
+    { 0, 3, 1 },                            /* under 7 */
+    { 2, 3, 2 },                            /* under 9, right of erase */
+    { 3, 3, 3 },                            /* the corner under 9 */
+    { 1, 4, 1 },                            /* under erase */
+    { 2, 4, 3 },                            /* its corner */
+};
+
 static void key_place(uint8_t k)            /* k: 1..10 */
 {
     uint8_t col = k == 10 ? 1 : (k - 1) % 3, row = k == 10 ? 3 : (k - 1) / 3;
     uint8_t s = SPR_KEYS + k - 1;
     set_sprite_tile(s, S_KEY + k - 1);
-    set_sprite_prop(s, k == key ? S_PALETTE : 0);
+    set_sprite_prop(s, k == key ? S_PALETTE | CPAL_KEY_CHOSEN : CPAL_KEY);
     move_sprite(s, pad_x + col * KEY_PITCH + 8, pad_y + row * KEY_PITCH + 16);
 }
 
@@ -176,22 +174,27 @@ void keypad_open(uint8_t digit)
     int16_t x = target_x() - view_x, y = target_y() - view_y;
     uint8_t k;
     key = digit ? digit : 5;
-    x = x + 16 + 3 + 3 * KEY_PITCH + 1 <= 160 ? x + 19 : x - 3 - (3 * KEY_PITCH + 1);
-    y = y + 8 - (4 * KEY_PITCH + 1) / 2;
+    x = x + 16 + 3 + PAD_W <= 160 ? x + 19 : x - 3 - PAD_W;
+    y = y + 8 - PAD_H / 2;
     if (y < 0)
         y = 0;
-    if (y > VIEW_H - (4 * KEY_PITCH + 1))
-        y = VIEW_H - (4 * KEY_PITCH + 1);
+    if (y > VIEW_H - PAD_H)
+        y = VIEW_H - PAD_H;
     pad_x = (uint8_t)x;
     pad_y = (uint8_t)y;
     for (k = 1; k <= 10; k++)
         key_place(k);
+    for (k = 0; k < EDGES; k++) {
+        set_sprite_tile(SPR_EDGES + k, S_EDGE + edges[k][2]);
+        set_sprite_prop(SPR_EDGES + k, CPAL_KEY);
+        move_sprite(SPR_EDGES + k, pad_x + edges[k][0] * KEY_PITCH + 8, pad_y + edges[k][1] * KEY_PITCH + 16);
+    }
 }
 
 void keypad_close(void)
 {
     uint8_t k;
-    for (k = 0; k < 10; k++)
+    for (k = 0; k < 10 + EDGES; k++)
         hide_sprite(SPR_KEYS + k);
 }
 

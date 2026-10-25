@@ -5,9 +5,9 @@
 
 #include <stdint.h>
 
-/* Plays puzzle `current` (resuming its saved progress); returns the next
- * screen: SCREEN_GAME for the next puzzle (current is advanced) or
- * SCREEN_GRID. */
+/* Plays puzzle `current` from the start; returns the next screen:
+ * SCREEN_GAME for the next puzzle (current is advanced) or SCREEN_GRID
+ * (solved, or quit: then nothing of it is kept). */
 uint8_t game_play(void);
 
 #endif

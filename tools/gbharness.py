@@ -1,21 +1,17 @@
 """PyBoy driver for the screenshot and test scripts.
 
-Runs the ROM headless with its battery RAM in memory (so tests start from an
-empty save unless given one), presses buttons the way a player would, and
-reads the game's variables through the symbols in build/kakuro.noi.
+Runs the ROM headless (a ROM-only cartridge: every run starts from power-on
+with nothing played), presses buttons the way a player would, and reads and
+writes the game's variables through the symbols in build/kakuro.noi.
 """
 from __future__ import annotations
 
-import io
 import re
 import warnings
 from pathlib import Path
 
 warnings.filterwarnings("ignore")
 from pyboy import PyBoy  # noqa: E402
-
-# Battery RAM of a new cartridge: anything; the game must not trust it.
-BLANK_RAM = bytes([0xFF]) * 8192
 
 # A neutral grey ramp for screenshots (white .. black), and the green of
 # the original Game Boy's screen.
@@ -43,15 +39,14 @@ def move_model(n: int, white: list[bool], cur: int, direction: str) -> int | Non
 
 
 class Game:
-    def __init__(self, rom: str | Path, ram: bytes | None = None, palette=SHADES):
+    def __init__(self, rom: str | Path, palette=SHADES, cgb: bool = False):
+        """cgb: run it on a Game Boy Color (else on the original, in shades)."""
         rom = Path(rom)
         self.symbols = {}
         noi = rom.with_suffix(".noi")
         for m in re.finditer(r"^DEF (\w+) 0x([0-9A-F]+)", noi.read_text(), re.M):
             self.symbols[m.group(1)] = int(m.group(2), 16)
-        self.pb = PyBoy(str(rom), window="null", sound_emulated=False,
-                        ram_file=io.BytesIO(ram if ram is not None else BLANK_RAM),
-                        color_palette=palette)
+        self.pb = PyBoy(str(rom), window="null", sound_emulated=False, color_palette=palette, cgb=cgb)
         self.pb.set_emulation_speed(0)
 
     # --- time and buttons ---------------------------------------------------
@@ -79,6 +74,11 @@ class Game:
             if steady == 10:
                 break
             self.wait(1)
+
+    def boot(self) -> None:
+        """From power-on past the start screen to the title."""
+        self.settle()
+        self.to_screen("start")
 
     def to_screen(self, button: str) -> None:
         """Presses a button that leads to another screen and waits for it."""
@@ -156,10 +156,8 @@ class Game:
     def screen_rgb(self):
         return self.pb.screen.image.convert("RGB")
 
-    def ram(self) -> bytes:
-        out = io.BytesIO()
-        self.pb.stop(ram_file=out)
-        return out.getvalue()
+    def poke(self, name: str, offset: int, value: int) -> None:
+        self.pb.memory[self.addr(name) + offset] = value
 
     def stop(self) -> None:
         self.pb.stop(save=False)

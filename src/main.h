@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-enum { SCREEN_TITLE, SCREEN_GROUPS, SCREEN_GRID, SCREEN_HELP, SCREEN_GAME };
+enum { SCREEN_SPLASH, SCREEN_TITLE, SCREEN_GRID, SCREEN_GAME };
 
 extern uint8_t current;                     /* the puzzle (0-based) */
 

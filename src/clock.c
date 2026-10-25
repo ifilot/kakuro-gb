@@ -12,7 +12,7 @@ static void timer_isr(void)
 {
     if (!clock_running)
         return;
-    if (++ticks < 16)
+    if (++ticks < TIMER_HZ)
         return;
     ticks = 0;
     if (clock_seconds < CLOCK_MAX)
@@ -24,7 +24,7 @@ void clock_init(void)
 {
     CRITICAL {
         add_TIM(timer_isr);
-        TMA_REG = 0;
+        TMA_REG = (uint8_t)(256 - 4096 / TIMER_HZ);
         TAC_REG = TACF_START | TACF_4KHZ;
     }
     set_interrupts(VBL_IFLAG | TIM_IFLAG);
@@ -53,5 +53,6 @@ void clock_add(uint16_t seconds)
 {
     CRITICAL {
         clock_seconds = clock_seconds < CLOCK_MAX - seconds ? clock_seconds + seconds : CLOCK_MAX;
+        clock_changed = 1;
     }
 }

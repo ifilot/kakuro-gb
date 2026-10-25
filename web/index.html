@@ -1,0 +1,129 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e2440">
+  <meta name="description" content="Kakuro for the Game Boy and Game Boy Color: 80 number puzzles from 6×6 to 8×8, playable in your browser.">
+  <title>Kakuro — Game Boy</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="vendor/binjgb/binjgb.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <a class="wordmark" href="./"><span class="clue" aria-hidden="true"></span>KAKURO <span class="dim">· GAME BOY</span></a>
+    <div class="header-actions">
+      <nav aria-label="Project links">
+        <a href="https://github.com/ifilot/kakuro-gb">SOURCE</a>
+        <a href="https://github.com/ifilot/kakuro-gb/releases/latest">DOWNLOAD</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="eyebrow">A GAME FOR THE GAME BOY AND GAME BOY COLOR</p>
+      <h1><img src="logo.png" width="__LOGO_W__" height="__LOGO_H__" alt="Kakuro"></h1>
+      <p class="lede">80 number puzzles from 6×6 to 8×8. Fill in the digits so every run adds up to its sum, without repeating a digit.</p>
+      <div class="intro-links">
+        <a class="button primary" href="#play">PLAY NOW</a>
+        <a class="button" href="https://github.com/ifilot/kakuro-gb/releases/latest">DOWNLOAD THE ROM</a>
+      </div>
+    </section>
+
+    <section id="play" class="play" aria-label="Game Boy emulator">
+      <div id="console" class="console cgb" tabindex="0" role="application"
+           aria-label="Game Boy: click to play with the keyboard">
+        <i class="groove" aria-hidden="true"></i>
+        <span class="switch" aria-hidden="true">◂ OFF · ON ▸</span>
+        <div class="bezel" aria-hidden="true">
+          <p class="bezel-label"><span>KAKURO · NUMBER CROSSWORD</span></p>
+          <i id="power" class="led"></i><span class="led-label">POWER</span>
+        </div>
+        <div class="screen">
+          <canvas id="screen" width="160" height="144"></canvas>
+          <div id="overlay" class="overlay"><span id="overlay-text">LOADING…</span></div>
+        </div>
+        <p class="brand" aria-hidden="true">KAKURO<span>2026</span></p>
+
+        <i class="dpad-well" aria-hidden="true"></i>
+        <div class="dpad" aria-label="D-pad">
+          <button type="button" class="up" data-button="up" aria-label="Up"></button>
+          <button type="button" class="left" data-button="left" aria-label="Left"></button>
+          <button type="button" class="right" data-button="right" aria-label="Right"></button>
+          <button type="button" class="down" data-button="down" aria-label="Down"></button>
+          <i class="hub" aria-hidden="true"></i>
+        </div>
+
+        <i class="ab-well" aria-hidden="true"></i>
+        <button type="button" class="round b" data-button="b" aria-label="B"></button>
+        <button type="button" class="round a" data-button="a" aria-label="A"></button>
+        <span class="label label-b" aria-hidden="true">B</span>
+        <span class="label label-a" aria-hidden="true">A</span>
+
+        <button type="button" class="pill select" data-button="select" aria-label="Select"></button>
+        <button type="button" class="pill start" data-button="start" aria-label="Start"></button>
+        <span class="label label-select" aria-hidden="true">SELECT</span>
+        <span class="label label-start" aria-hidden="true">START</span>
+
+        <div class="speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="settings">
+        <div class="model" role="radiogroup" aria-label="Model">
+          <button type="button" role="radio" data-model="dmg" aria-checked="false">GAME BOY</button>
+          <button type="button" role="radio" data-model="cgb" aria-checked="true">GAME BOY COLOR</button>
+        </div>
+        <button id="sound" type="button" aria-pressed="true">SOUND ON</button>
+        <button id="reset" type="button">RESET</button>
+      </div>
+      <p id="status" class="status">Click the Game Boy to play with the keyboard.</p>
+    </section>
+
+    <section class="about">
+      <h2>How to play</h2>
+      <p>Fill every white cell with a digit from 1 to 9 so that each run of white cells adds up to the sum before it: the upper-right triangle is the sum of the run to its right, the lower-left one of the run below. No digit repeats within a run, and grey cells are given. Every puzzle has exactly one solution.</p>
+      <table class="keys">
+        <thead><tr><th>Button</th><th>Keyboard</th><th>On the board</th></tr></thead>
+        <tbody>
+          <tr><td>D-pad</td><td><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd></td><td>Move to the nearest white cell</td></tr>
+          <tr><td>A</td><td><kbd>X</kbd></td><td>Keypad: choose a digit, A to put it</td></tr>
+          <tr><td>B</td><td><kbd>Z</kbd></td><td>Wipe the cell</td></tr>
+          <tr><td>SELECT</td><td><kbd>Shift</kbd></td><td>Combinations of the cursor's runs</td></tr>
+          <tr><td>START</td><td><kbd>Enter</kbd></td><td>Pause: reveal a cell, start over, music, quit</td></tr>
+        </tbody>
+      </table>
+      <p>A gamepad works too. Nothing is saved, just like the cartridge: a puzzle is played in one go, and the best times last until you reload the page.</p>
+    </section>
+
+    <section class="shots">
+      <h2>Screenshots</h2>
+      <div class="shot-grid">
+        <figure><img src="screenshots/start.png" width="480" height="432" loading="lazy" alt=""><figcaption>The start screen</figcaption></figure>
+        <figure><img src="screenshots/title.png" width="480" height="432" loading="lazy" alt=""><figcaption>Choosing a size and difficulty</figcaption></figure>
+        <figure><img src="screenshots/playing.png" width="480" height="432" loading="lazy" alt=""><figcaption>An 8×8 puzzle in progress</figcaption></figure>
+        <figure><img src="screenshots/combinations.png" width="480" height="432" loading="lazy" alt=""><figcaption>The combinations of a run</figcaption></figure>
+        <figure><img src="screenshots/solved.png" width="480" height="432" loading="lazy" alt=""><figcaption>Solved: the overview</figcaption></figure>
+        <figure><img src="screenshots/color_keypad.png" width="480" height="432" loading="lazy" alt=""><figcaption>On the Game Boy Color</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="more">
+      <h2>Kakuro on other machines</h2>
+      <nav aria-label="Other versions">
+        <a href="https://ifilot.github.io/p2000c-kakuro/">Philips P2000C</a>
+        <a href="https://ifilot.github.io/cx16-kakuro/">Commander X16</a>
+        <a href="https://ifilot.github.io/msdos-kakuro/">MS-DOS</a>
+      </nav>
+    </section>
+  </main>
+
+  <footer>
+    <p>KAKURO <span>v__VERSION__</span></p>
+    <p><a href="licenses/game.txt">GAME LICENSE (GPL-3.0)</a> · <a href="licenses/binjgb.txt">EMULATOR LICENSE (binjgb, MIT)</a> · <a href="provenance.json">PROVENANCE</a></p>
+  </footer>
+</body>
+</html>

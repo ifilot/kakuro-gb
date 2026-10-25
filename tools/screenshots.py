@@ -18,7 +18,8 @@ from gbharness import GREEN, SHADES, Game  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = "--docs" in sys.argv
 OUT = ROOT / ("docs" if DOCS else "build/screens")
-DOC_SHOTS = {"title", "grid", "playing", "keypad", "combinations", "solved"}
+DOC_SHOTS = {"start", "title", "grid", "playing", "keypad", "combinations", "pause", "quit", "wave", "solved",
+             "color_keypad", "color_grid"}
 PALETTE = GREEN if DOCS else SHADES
 SCALE = 3
 shots: list[Path] = []
@@ -49,10 +50,14 @@ def main() -> int:
     rom = args[0] if args else str(ROOT / "build/kakuro.gb")
     game = Game(rom, palette=PALETTE)
     game.settle()
+    game.wait(200)                          # the logo filled in
+    while not game.reg(0x9800 + 32 * 16 + 5):   # PRESS START on (not the black tile)
+        game.wait(1)
+    save(game, "start")
+    game.to_screen("start")
     save(game, "title")
-    game.to_screen("a")
-    save(game, "groups")
-    game.presses("down", 5)
+    game.presses("down", 2)                 # 8x8 **: the cards' last row, first column
+    game.press("left")
     game.to_screen("a")
     game.wait(20)
     save(game, "grid")
@@ -69,36 +74,39 @@ def main() -> int:
     game.press("select", after=30)
     game.press("start", after=30)
     save(game, "pause")
-    game.presses("down", 3)
+    game.presses("down", 4)
+    game.press("a", after=30)               # QUIT TO MENU asks first
+    save(game, "quit")
+    game.press("down")
     game.to_screen("a")                     # quit to the grid
     game.wait(20)
-    save(game, "grid_started")
-    game.to_screen("b")
-    game.presses("up", 5)
-    game.presses("down", 7)
-    game.to_screen("a")                     # 10x10 ***
-    game.to_screen("a")
-    for _ in range(9):
-        game.press("down", after=6)
-    game.wait(20)
-    save(game, "board_10x10")
+    save(game, "grid_after")
     game.stop()
 
     game = Game(rom, palette=PALETTE)       # a whole 6x6 puzzle, solved
-    game.settle()
-    game.to_screen("a")
+    game.boot()
     game.to_screen("a")
     game.to_screen("a")
     solve(game)
+    while not game.reg(0xFFFF) & 2:         # the wave's line interrupt
+        game.wait(1)
+    game.wait(12)
+    save(game, "wave")
     game.wait(60)
     save(game, "solved")
     game.stop()
 
-    game = Game(rom, palette=PALETTE)
-    game.settle()
-    game.press("down", after=4)
+    game = Game(rom, cgb=True)              # on a Game Boy Color: an 8x8 puzzle
+    game.boot()
+    game.presses("down", 2)
+    game.press("left")
     game.to_screen("a")
-    save(game, "help")
+    game.wait(20)
+    save(game, "color_grid")
+    game.to_screen("a")
+    solve(game, leave=game.byte("empty") * 2 // 3)
+    game.press("a", after=10)
+    save(game, "color_keypad")
     game.stop()
 
     if DOCS:

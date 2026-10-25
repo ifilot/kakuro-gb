@@ -2,7 +2,7 @@
 /* puzzle.h -- the puzzle: cells, sums, runs, the solved test and the
  * combinations of a sum.
  *
- * The grid is n x n (6..10) with the sums in row 0 and column 0; cells are
+ * The grid is n x n (6..8) with the sums in row 0 and column 0; cells are
  * row-major (index = row * n + column). A black cell holds the sum of the
  * run of white cells to its right (across) and/or below it (down); a run of
  * a single white cell has no sum in that direction. */
@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 
-#define MAX_N     10
+#define MAX_N     8
 #define MAX_CELLS (MAX_N * MAX_N)
 #define NO_RUN    0xFF
 
@@ -35,9 +35,6 @@ uint8_t puzzle_group(uint8_t k);
 
 /* Loads puzzle k (0-based) with only the given digits filled in. */
 void puzzle_load(uint8_t k);
-
-/* Index of cell i in the inner (n-1)x(n-1) grid, as the save file has it. */
-uint8_t inner_index(uint8_t i);
 
 /* Every white cell filled, every run's digits different and adding up to its sum? */
 uint8_t puzzle_solved(void);

@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """Plays the ROM in PyBoy the way a player would and checks the game.
 
+0. The start screen: the logo filled in, the scene under it, START to the
+   title.
 1. Every puzzle, in order: the puzzle in memory (cells, givens, sums, runs)
    against src/puzzles.c and against the .puz files themselves, the board
    on screen tile by tile, and then the puzzle solved with the D-pad and the
    keypad. Every tenth puzzle first gets a wrong last digit, which must be
-   refused ("NOT YET RIGHT"). After the last puzzle every best time must be
-   in the battery RAM.
+   refused ("NOT YET RIGHT"). A solved puzzle must lead on the wave to the
+   overview, with the number solved. After the last puzzle every best time
+   must be in the store (work RAM: the cartridge is ROM only).
 2. On the first puzzle: given digits cannot be changed, B and the keypad's
    erase key wipe a cell, the combinations panel against a Python model,
    the hint, and starting over.
-3. Progress survives switching off: digits and clock come back through
-   CONTINUE, and the grid screen marks solved and started puzzles.
-4. Battery RAM holding garbage is cleared at start-up.
+3. Quitting a puzzle asks first; KEEP PLAYING (or B) keeps it, QUIT drops
+   it: opened again it starts afresh. The grid screen marks solved puzzles.
+4. The header: a ROM-only cartridge, without RAM, for the Color too.
+5. On a Game Boy Color: every cell of the first puzzle has its palette,
+   and the puzzle is solved through to the overview.
 
   python3 tools/test_game.py build/kakuro.gb
 """
@@ -26,11 +31,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
-from gbharness import Game  # noqa: E402
+from gbharness import SHADES, Game  # noqa: E402
 import gen_puzzles  # noqa: E402
 
 WIN_MAP, BG_MAP = 0x9C00, 0x9800
-PANEL_CLOSED, PANEL_SOLVED = 136, 80
+PUZZLE_COUNT = int(re.search(r"#define PUZZLE_COUNT (\d+)", (ROOT / "src/puzzles.h").read_text()).group(1))
+PANEL_CLOSED = 136
 failures: list[str] = []
 
 
@@ -113,9 +119,9 @@ GFX = gfx_constants()
 
 
 def expected_map(p: dict, cells: list[int]) -> list[list[int]]:
-    """The (2n-1)^2 background tiles of the board, as board.c draws them."""
+    """The (2n)^2 background tiles of the board, as board.c draws them."""
     n = p["n"]
-    size = 2 * n - 1
+    size = 2 * n
     grid = [[None] * size for _ in range(size)]
     for i in range(n * n):
         v = cells[i]
@@ -130,9 +136,7 @@ def expected_map(p: dict, cells: list[int]) -> list[list[int]]:
                  GFX["T_DOWN"] + dn - 3 if dn else GFX["T_BLACK"], GFX["T_BR"] + k]
         r, c = divmod(i, n)
         for qi, (dy, dx) in enumerate(((0, 0), (0, 1), (1, 0), (1, 1))):
-            y, x = 2 * r - 1 + dy, 2 * c - 1 + dx
-            if x >= 0 and y >= 0:
-                grid[y][x] = q[qi]
+            grid[2 * r + dy][2 * c + dx] = q[qi]
     return grid
 
 
@@ -152,8 +156,45 @@ def map_text(game: Game, base: int, row: int) -> str:
     return "".join(out)
 
 
+def shade(game: Game, x: int, y: int) -> int:
+    """The shade (0 white .. 3 black) of a dot on the screen."""
+    r, g, b = game.screen_rgb().getpixel((x, y))
+    return SHADES.index(r << 16 | g << 8 | b)
+
+
+def on_title(game: Game) -> bool:
+    """Whether the cursor (sprite 0, its top-left bracket) is on one of the
+    title's cards (menu.c: rows 6-14)."""
+    return 40 <= game.reg(0xFE00) - 16 < 120
+
+
+def grid_cell(game: Game, j: int) -> tuple[int, int]:
+    """Puzzle j of the grid screen: the shade of its cell, and of a dot of
+    the check mark in its top right (menu.c: solved ones have it)."""
+    x, y = 8 + 16 * (j % 5), 24 + 16 * (j // 5)
+    return shade(game, x + 8, y + 13), shade(game, x + 11, y + 5)
+
+
+def status_text(game: Game) -> str:
+    """The status line's text left of the clock (it is drawn dot by dot)."""
+    return bytes(game.bytes("status_text", 16)).split(b"\0")[0].decode()
+
+
 def wy(game: Game) -> int:
     return game.reg(0xFF4A)
+
+
+def wait_overview(game: Game, frames: int = 300) -> tuple[bool, bool]:
+    """Waits for the overview to cover the screen (window at 7, 0 and the
+    line interrupt off again); returns (got there, the wave ran)."""
+    waved = False
+    for _ in range(frames):
+        on = bool(game.reg(0xFFFF) & 2)
+        waved |= on
+        if waved and not on and game.reg(0xFF4B) == 7 and wy(game) == 0:
+            return True, waved
+        game.wait(1)
+    return False, waved
 
 
 def wait_panel(game: Game, target: int, frames: int = 60) -> bool:
@@ -181,11 +222,18 @@ def check_loaded(game: Game, k: int, p: dict) -> bool:
     return ok
 
 
-def check_board(game: Game, k: int, p: dict, label: str) -> bool:
+def check_board(game: Game, k: int, p: dict, label: str, centred: bool = True) -> bool:
     n = p["n"]
     grid = expected_map(p, game.bytes("cell", n * n))
-    got = [[game.reg(BG_MAP + 32 * y + x) for x in range(2 * n - 1)] for y in range(2 * n - 1)]
-    return check(got == grid, f"puzzle {k + 1}: board tiles differ ({label})")
+    got = [[game.reg(BG_MAP + 32 * y + x) for x in range(2 * n)] for y in range(2 * n)]
+    ok = check(got == grid, f"puzzle {k + 1}: board tiles differ ({label})")
+    if not centred:                          # the wave has moved it
+        return ok
+    # Centred in the 160x136 dots above the status line.
+    px = n * 16
+    ok &= check(game.reg(0xFF43) == -((160 - px) // 2) & 0xFF, f"puzzle {k + 1}: board not centred across ({label})")
+    ok &= check(game.reg(0xFF42) == -((136 - px) // 2) & 0xFF, f"puzzle {k + 1}: board not centred down ({label})")
+    return ok
 
 
 def open_cells(game: Game) -> list[int]:
@@ -203,11 +251,15 @@ def solve(game: Game, k: int, p: dict, wrong_first: bool) -> None:
     if wrong_first:
         game.enter(p["solution"][last] % 9 + 1)
         game.wait(2)
-        check(map_text(game, WIN_MAP, 0).startswith("NOT YET RIGHT"), f"puzzle {k + 1}: wrong filling not refused")
+        check(status_text(game) == "NOT YET RIGHT", f"puzzle {k + 1}: wrong filling not refused")
         check(wy(game) == PANEL_CLOSED, f"puzzle {k + 1}: wrong filling counted as solved")
     game.enter(p["solution"][last])
-    check(wait_panel(game, PANEL_SOLVED), f"puzzle {k + 1}: solved panel did not show")
-    check(map_text(game, WIN_MAP, 2).strip() == "SOLVED!", f"puzzle {k + 1}: no SOLVED! text")
+    shown, waved = wait_overview(game)
+    check(waved, f"puzzle {k + 1}: no wave after solving")
+    check(shown, f"puzzle {k + 1}: overview did not show")
+    rows = [map_text(game, WIN_MAP, y)[1:19] for y in range(18)]
+    check(rows[2].strip() == "SOLVED!", f"puzzle {k + 1}: no SOLVED! on the overview")
+    check(rows[8].strip() == f"SOLVED     {k + 1:2}/{PUZZLE_COUNT}", f"puzzle {k + 1}: overview {rows[8]!r}")
 
 
 def combos(total: int, length: int) -> list[str]:
@@ -218,6 +270,11 @@ def check_panel(game: Game, p: dict) -> None:
     """The combinations panel for the cursor's runs."""
     cur, n = game.byte("cur"), p["n"]
     cells = game.bytes("cell", n * n)
+    labels = []
+    for arrow, key in (("[", "a"), ("\\", "d")):
+        head = p["head_" + key][cur]
+        labels.append(arrow + (" -  " if head == 0xFF else f"{p['sum_' + key][head]:2}/{p['len_' + key][head]}"))
+    check(status_text(game) == " ".join(labels), f"status line {status_text(game)!r}, want {' '.join(labels)!r}")
     game.press("select", after=2)
     check(wait_panel(game, 0), "combinations panel did not open")
     rows = [map_text(game, WIN_MAP, y) for y in range(18)]
@@ -306,12 +363,46 @@ def feature_tests(game: Game, k: int, p: dict) -> None:
     del n
 
 
-def full_run(rom: str, model: list[dict]) -> bytes:
+# src/best.c: a best time per puzzle, 2 bytes (little endian), 0 = not solved.
+def best_time(game: Game, k: int) -> int:
+    return game.byte("best_times", 2 * k) | game.byte("best_times", 2 * k + 1) << 8
+
+
+def set_best(game: Game, k: int, seconds: int) -> None:
+    game.poke("best_times", 2 * k, seconds & 0xFF)
+    game.poke("best_times", 2 * k + 1, seconds >> 8)
+
+
+def gfx_array(name: str) -> list[int]:
+    """An array of src/gfx.c."""
+    body = re.search(rf"{name}\[\d+\] = {{(.*?)}};", (ROOT / "src/gfx.c").read_text(), re.S).group(1)
+    return [int(x, 16) for x in re.findall(r"0x([0-9A-F]{2})", body)]
+
+
+def splash_test(rom: str) -> None:
     game = Game(rom)
     game.settle()
-    check(map_text(game, BG_MAP, 10).strip() == "> CHOOSE PUZZLE", "title: CONTINUE offered on a new cartridge")
-    game.to_screen("a")                          # groups
-    game.to_screen("a")                          # grid of 6x6
+    game.wait(300)
+    logo = gfx_array("frame_map")[:100]
+    got = [game.reg(BG_MAP + 32 * y + x) for y in range(5) for x in range(20)]
+    check(got == logo, "start screen: the logo not filled in")
+    scene = gfx_array("scene_map")
+    got = [game.reg(BG_MAP + 32 * y + x) for y in range(5, 5 + len(scene) // 20) for x in range(20)]
+    check(got == scene, "start screen: the scene not there")
+    game.to_screen("start")
+    check(on_title(game), "start screen: START did not lead to the title's cards")
+    current = game.byte("current")
+    game.press("left", after=4)                  # 6x6 *, no puzzles yet
+    game.press("a", after=30)
+    check(on_title(game) and game.byte("current") == current, "title: a group without puzzles opened")
+    game.stop()
+
+
+def full_run(rom: str, model: list[dict]) -> None:
+    game = Game(rom)
+    game.boot()
+    check(on_title(game), "title: not shown after the start screen")
+    game.to_screen("a")                          # grid of 6x6 **
     game.to_screen("a")                          # puzzle 1
     started = time.time()
     for k, p in enumerate(model):
@@ -320,73 +411,111 @@ def full_run(rom: str, model: list[dict]) -> bytes:
             if k == 0:
                 feature_tests(game, k, p)
             solve(game, k, p, wrong_first=k % 10 == 0)
-            check_board(game, k, p, "solved")
+            check_board(game, k, p, "solved", centred=False)
         game.to_screen("a")                      # next puzzle
         if k % 25 == 24:
             print(f"  {k + 1} puzzles solved ({time.time() - started:.0f} s)")
     check(game.byte("current") == 0, "after the last puzzle: not back at puzzle 1")
-    ram = game.ram()
-    check(ram[:7] == b"KAKURO\x01", "battery RAM: no signature")
     for k in range(len(model)):
-        best = ram[0x10 + 2 * k] | ram[0x11 + 2 * k] << 8
-        check(best > 0, f"puzzle {k + 1}: no best time saved")
-        check(ram[0x200 + 44 * k] == 0, f"puzzle {k + 1}: still marked as started")
-    return ram
-
-
-def resume_test(rom: str, ram: bytes, model: list[dict]) -> None:
-    game = Game(rom, ram)
-    game.settle()
-    game.to_screen("a")                          # groups, at puzzle 1's group
-    game.to_screen("a")                          # grid
-    game.press("right", after=20)
-    game.to_screen("a")                          # puzzle 2
-    p = model[1]
-    check(game.byte("current") == 1, "resume: puzzle 2 not started")
-    cells = open_cells(game)[:3]
-    for i in cells:
-        game.goto(i)
-        game.enter(p["solution"][i])
-    game.wait(200)
-    seconds = game.word("clock_seconds")
-    state = game.bytes("cell", p["n"] ** 2)
-    ram = game.ram()                             # switched off while playing
-
-    game = Game(rom, ram)
-    game.settle()
-    check(map_text(game, BG_MAP, 10).strip() == "> CONTINUE", "resume: no CONTINUE on the title screen")
-    game.to_screen("a")
-    check(game.byte("current") == 1, "resume: CONTINUE opened another puzzle")
-    check(game.bytes("cell", p["n"] ** 2) == state, "resume: digits not restored")
-    check(abs(game.word("clock_seconds") - seconds) <= 1, f"resume: clock {game.word('clock_seconds')} != {seconds}")
-    check_board(game, 1, {**p}, "resumed")
-    game.press("start", after=20)
-    game.presses("down", 3, after=2)
-    game.to_screen("a")                          # quit to the grid
-    game.wait(20)
-    check(map_text(game, BG_MAP, 3)[1:5] == "  1]" and map_text(game, BG_MAP, 3)[6:10] == "  2_",
-          f"grid: marks {map_text(game, BG_MAP, 3)!r}")
+        check(best_time(game, k) > 0, f"puzzle {k + 1}: no best time")
     game.stop()
 
 
-def garbage_test(rom: str) -> None:
-    game = Game(rom, bytes((k * 37 + 11) & 0xFF for k in range(8192)))
-    game.settle()
-    check(map_text(game, BG_MAP, 10).strip() == "> CHOOSE PUZZLE", "garbage RAM: CONTINUE offered")
-    ram = game.ram()
-    check(ram[:7] == b"KAKURO\x01" and not any(ram[0x10:0x10 + 300]), "garbage RAM: not cleared")
+def quit_test(rom: str, model: list[dict]) -> None:
+    """Leaving a puzzle asks first, and it is not kept."""
+    game = Game(rom)
+    game.boot()
+    for k in (0, 2):                             # puzzles 1 and 3 solved before
+        set_best(game, k, 100)
+    game.to_screen("a")                          # grid, at puzzle 1's group
+    game.press("right", after=20)
+    game.to_screen("a")                          # puzzle 2
+    p = model[1]
+    n = p["n"]
+    fresh = game.bytes("cell", n * n)
+    check(game.byte("current") == 1, "quit: puzzle 2 not started")
+    for i in open_cells(game)[:3]:
+        game.goto(i)
+        game.enter(p["solution"][i])
+    game.wait(200)
+    state = game.bytes("cell", n * n)
+    game.press("start", after=20)
+    game.presses("down", 4, after=2)             # QUIT TO MENU
+    game.press("a", after=20)
+    check(map_text(game, WIN_MAP, 2)[2:].strip() == "QUIT THIS PUZZLE?", f"quit: no question, {map_text(game, WIN_MAP, 2)!r}")
+    check(map_text(game, WIN_MAP, 6)[2:].strip() == "TIME ARE LOST.", "quit: the loss not told")
+    game.press("a", after=20)                    # KEEP PLAYING: back to the pause menu
+    check(map_text(game, WIN_MAP, 2)[2:].strip() == "RESUME", "quit: KEEP PLAYING did not return to the pause menu")
+    game.press("b", after=20)
+    check(game.bytes("cell", n * n) == state, "quit: KEEP PLAYING lost digits")
+    game.press("start", after=20)
+    game.presses("down", 3, after=2)             # MUSIC: off and on again
+    for on in (False, True):
+        game.press("a", after=4)
+        label = "MUSIC: ON" if on else "MUSIC: OFF"
+        check(map_text(game, WIN_MAP, 5)[2:].strip() == label, f"pause: {map_text(game, WIN_MAP, 5)!r}, want {label}")
+    game.press("down", after=2)
+    game.press("a", after=20)
+    game.press("b", after=20)                    # B: keeps playing too
+    check(map_text(game, WIN_MAP, 2)[2:].strip() == "RESUME", "quit: B did not return to the pause menu")
+    game.press("a", after=20)
+    game.press("down", after=4)                  # QUIT PUZZLE
+    game.to_screen("a")
+    game.wait(20)
+    # Puzzles 1 and 3: light, with a check mark; puzzle 2 left: neither.
+    check([grid_cell(game, j) for j in range(3)] == [(1, 2), (0, 0), (1, 2)],
+          f"grid: marks {[grid_cell(game, j) for j in range(3)]}")
+    game.to_screen("b")
+    check(on_title(game), "quit: B from the grid did not lead to the title")
+    game.to_screen("a")
+    game.to_screen("a")                          # puzzle 2 again
+    check(game.byte("current") == 1, "quit: not back at puzzle 2")
+    check(game.bytes("cell", n * n) == fresh, "quit: digits kept after quitting")
+    check(game.word("clock_seconds") <= 1, f"quit: clock kept, {game.word('clock_seconds')}")
+    game.stop()
+
+
+def header_test(rom: str) -> None:
+    data = Path(rom).read_bytes()
+    check(data[0x147] == 0x00, f"header: cartridge type {data[0x147]:#04x}, want 0x00 (ROM only)")
+    check(data[0x149] == 0x00, f"header: RAM size {data[0x149]:#04x}, want 0x00")
+    check(data[0x148] == 0x00 and len(data) == 32768, "header: not a 32 KiB ROM")
+    check(data[0x143] == 0x80, "header: not marked for the Game Boy Color too")
+
+
+def cgb_test(rom: str, model: list[dict]) -> None:
+    game = Game(rom, cgb=True)
+    game.boot()
+    check(game.byte("cgb") == 1, "Color: not detected")
+    game.to_screen("a")                          # grid
+    game.to_screen("a")                          # puzzle 1
+    p = model[0]
+    n = p["n"]
+    cells = game.bytes("cell", n * n)
+    for i in range(n * n):
+        # video.h: CPAL_CLUE 1, CPAL_CELL 2, CPAL_GIVEN 3
+        want = 1 if not cells[i] & 0x80 else 3 if cells[i] & 0x10 else 2
+        r, c = divmod(i, n)
+        got = {game.pb.memory[1, 0x9800 + 32 * (2 * r + dy) + 2 * c + dx] for dy in (0, 1) for dx in (0, 1)}
+        check(got == {want}, f"Color: cell {i} palettes {got}, want {want}")
+    solve(game, 0, p, wrong_first=False)
+    game.stop()
 
 
 def main() -> int:
     rom = sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "build/kakuro.gb")
     print("model")
     model = load_model()
+    print("start screen")
+    splash_test(rom)
     print(f"full run: {len(model)} puzzles")
-    ram = full_run(rom, model)
-    print("resume")
-    resume_test(rom, ram, model)
-    print("garbage in battery RAM")
-    garbage_test(rom)
+    full_run(rom, model)
+    print("quit")
+    quit_test(rom, model)
+    print("cartridge header")
+    header_test(rom)
+    print("Game Boy Color")
+    cgb_test(rom, model)
     if failures:
         print(f"{len(failures)} failure(s)")
         return 1

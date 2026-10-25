@@ -13,8 +13,10 @@ should one have more solutions, givens are added from the stored solution
 until only one remains, and reported on stdout.
 
 The puzzles are ordered by size, then by difficulty (stars), then by their
-original number, and numbered 1..N in that order. Consecutive puzzles of one
-size and difficulty form a group, a line in the puzzle menu.
+original number, and numbered 1..N in that order. The puzzles of one size
+and difficulty form a group, a card in the menu: GROUPS lists them, in the
+menu's order (a 3x2 grid, a size a row); a group without puzzles yet is
+shown as coming.
 
 Encoding, per puzzle at puzzle_data + puzzle_offset[k]: the inner
 (n-1)x(n-1) grid (rows and columns 1..n-1) as nibbles, high nibble first, 0
@@ -35,6 +37,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "assets/puzzles"
 OUTPUT = ROOT / "src/puzzles.h"
 LIMIT = 400                       # solutions enumerated per round of adding givens
+MAX_N = 8                         # the largest grid, with the sums (MAX_N in src/puzzle.h)
+GROUPS = [(6, 1), (6, 2), (7, 2), (7, 3), (8, 2), (8, 3)]   # (size, stars), sorted
 
 # combos[(k, s)]: bit masks (bit d = digit d) of k distinct digits 1-9 summing to s
 COMBOS: dict[tuple[int, int], list[int]] = {}
@@ -53,8 +57,8 @@ class Puzzle:
         self.stars = int(m.group(2)) if m else 0
         rows = [line.split() for line in lines if line.strip() and not line.startswith("#")]
         self.n = len(rows)
-        if not 6 <= self.n <= 10 or any(len(r) != self.n for r in rows):
-            raise ValueError("not a square grid of 6 to 10")
+        if not 6 <= self.n <= MAX_N or any(len(r) != self.n for r in rows):
+            raise ValueError(f"not a square grid of 6 to {MAX_N}")
         self.solution = [int(c.lstrip("#")) for r in rows for c in r]
         self.given = {i for i, c in enumerate(c for r in rows for c in r) if c.startswith("#")}
         self.runs = self._runs()
@@ -196,12 +200,15 @@ def main() -> int:
         puzzles.append(p)
     puzzles.sort(key=lambda p: (p.n, p.stars, p.number))
 
+    assert GROUPS == sorted(GROUPS)
+    for p in puzzles:
+        if (p.n, p.stars) not in GROUPS:
+            raise SystemExit(f"{p.name}: {p.n}x{p.n} with {p.stars} stars is in none of GROUPS")
     groups: list[list[int]] = []                       # [n, stars, first, count]
-    for k, p in enumerate(puzzles):
-        if groups and groups[-1][0] == p.n and groups[-1][1] == p.stars:
-            groups[-1][3] += 1
-        else:
-            groups.append([p.n, p.stars, k, 1])
+    for n, stars in GROUPS:
+        members = [k for k, p in enumerate(puzzles) if (p.n, p.stars) == (n, stars)]
+        first = members[0] if members else sum(1 for p in puzzles if (p.n, p.stars) < (n, stars))
+        groups.append([n, stars, first, len(members)])
 
     data, offsets = bytearray(), []
     for p in puzzles:
@@ -234,7 +241,7 @@ def main() -> int:
     OUTPUT.with_suffix(".c").write_text("\n".join(source))
     print(f"wrote {OUTPUT.relative_to(ROOT)} and .c: {len(puzzles)} puzzles in {len(groups)} groups, {len(data)} bytes")
     for n, stars, first, count in groups:
-        print(f"  {n}x{n} {'*' * stars:5} puzzles {first + 1}-{first + count}")
+        print(f"  {n}x{n} {'*' * stars:5} " + (f"puzzles {first + 1}-{first + count}" if count else "none yet"))
     return 0
 
 

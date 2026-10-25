@@ -1,8 +1,12 @@
 name: Build
 
+# Every push, to any branch, and every pull request: build kakuro.gb and
+# solve every puzzle in the emulator. A tag v<version> also publishes a
+# release: the ROM and a zip, with that version's CHANGELOG section as notes.
+
 on:
   push:
-    branches: [master]
+    branches: ['**']
     tags: ['v*']
   pull_request:
   workflow_dispatch:
@@ -46,6 +50,24 @@ jobs:
           cd release && zip -9 ../kakuro-gb.zip kakuro.gb LICENSE README.md CHANGELOG.md
           sha256sum ../kakuro-gb.zip kakuro.gb
 
+      - name: Release notes (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -n 's/^#define VERSION "\(.*\)"$/\1/p' src/version.h)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match src/version.h ($version)"
+            exit 1
+          fi
+          # the CHANGELOG's section for this version, without its heading
+          awk -v v="$version" '
+            /^## \[/ { if (on) exit; on = index($0, "## [" v "]") == 1; next }
+            on' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+          cat release-notes.md
+
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:
@@ -53,6 +75,8 @@ jobs:
           path: |
             kakuro-gb.zip
             build/kakuro.gb
+            release-notes.md
+          if-no-files-found: ignore
           retention-days: 90
 
   release:
@@ -77,6 +101,8 @@ jobs:
           files="dist/kakuro-gb.zip dist/build/kakuro.gb"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" $files --clobber
+            gh release edit "$GITHUB_REF_NAME" --notes-file dist/release-notes.md
           else
-            gh release create "$GITHUB_REF_NAME" $files --title "Kakuro $GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" $files --title "Kakuro $GITHUB_REF_NAME" \
+              --notes-file dist/release-notes.md
           fi

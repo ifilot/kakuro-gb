@@ -9,27 +9,65 @@
 #define T_TL       74
 #define T_BR       78
 #define T_ACROSS   82
-#define T_DOWN     125
-#define T_WHITE    168
-#define T_DIGIT    172
-#define T_GIVEN    208
-#define GAME_TILE_COUNT 244
+#define T_DOWN     122
+#define T_WHITE    162
+#define T_DIGIT    166
+#define T_GIVEN    202
+#define T_STATUS   238
+#define GAME_TILE_COUNT 238
+#define STATUS_TILE_MAX 18
 
 #define SUM_MIN 3
 /* The font covers ASCII 32..95: tile = T_FONT + ch - 32. */
 
-/* Menu screens: the board tiles are replaced by the logo and preview tiles. */
-#define T_MENU 73
-#define MENU_TILE_COUNT 41
-#define T_PREVIEW 114
+/* Menu screens: black and the preview's cells from 0 on, then the tiles
+ * each screen draws (from M_FREE); the title has the logo first. */
+#define M_BLACK 0
+#define M_PREVIEW 1                /* white, given */
+#define MENU_TILE_COUNT 3
+#define M_FREE 3
+/* The title screens' frame (the logo and a border round the screen):
+ * its tiles from M_LOGO, its map of the whole screen (inside black). */
+#define M_LOGO 3
+#define FRAME_TILE_COUNT 57
+#define M_FREE_TITLE 60
 #define LOGO_W 20
 #define LOGO_H 5
+extern const unsigned char frame_tiles[], frame_map[];
+/* The start screen's scene (tools/scene.py): its tiles from M_FREE_TITLE,
+ * its map from row SCENE_Y and Color palettes (the logo's is the last,
+ * SCENE_PAL_LOGO). */
+#define SCENE_TILE_COUNT 131
+#define SCENE_Y 5
+#define SCENE_H 11
+#define SCENE_PAL_LOGO 7
+extern const unsigned char scene_tiles[], scene_map[], scene_attr[];
+extern const unsigned int scene_colours[32];
+/* The logo with empty cells, and per part (the sum, then the letters)
+ * the first tile column and how many, where it is filled in. */
+#define LOGO_PARTS 7
+extern const unsigned char logo_empty[], logo_part_x[], logo_part_w[];
 
 /* Sprite tiles (0x8000). */
 #define S_CORNER 0
 #define S_KEY 1
-#define SPRITE_TILE_COUNT 11
+#define S_EDGE 11                  /* down, across, both, dot */
+#define SPRITE_TILE_COUNT 15
 
-extern const unsigned char game_tiles[], menu_tiles[], sprite_tiles[], logo_map[];
+/* The Color's DIGIT and GIVEN tiles (the digit dark grey), from T_DIGIT on. */
+#define CGB_CELL_COUNT 72
+extern const unsigned char cgb_cell_tiles[];
+
+/* The wave: line y starts wave_delay[y % WAVE_PERIOD] dots of progress late;
+ * after p dots of progress a line has come wave_ease[p] dots (0..WAVE_WIDTH). */
+#define WAVE_PERIOD 72
+#define WAVE_LINES 73
+#define WAVE_WIDTH 159
+#define WAVE_END 199             /* progress when every line is in */
+extern const unsigned char wave_delay[WAVE_LINES], wave_ease[WAVE_WIDTH + 1];
+
+/* The status line's font: tiny_font[(ch - 32) * 6] is the width in dots, then 5 rows. */
+extern const unsigned char game_tiles[], menu_tiles[];
+extern const unsigned char sprite_tiles[], tiny_font[];
 
 #endif

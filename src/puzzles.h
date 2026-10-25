@@ -2,8 +2,8 @@
 #ifndef PUZZLES_H
 #define PUZZLES_H
 
-#define PUZZLE_COUNT 150
-#define GROUP_COUNT 11
+#define PUZZLE_COUNT 80
+#define GROUP_COUNT 6
 
 /* Groups of one size and difficulty: grid size (with the sum row and
  * column), stars, first puzzle, count. */

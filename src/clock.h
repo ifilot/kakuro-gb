@@ -1,16 +1,18 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* clock.h -- the game clock, in whole seconds, from the timer interrupt
- * (4096 Hz / 256 = 16 interrupts a second). */
+ * (4096 Hz / 64 = TIMER_HZ interrupts a second; the music runs on them
+ * too). */
 #ifndef CLOCK_H
 #define CLOCK_H
 
 #include <stdint.h>
 
+#define TIMER_HZ  64
 #define CLOCK_MAX 35999u                    /* 9:59:59 */
 
 extern volatile uint16_t clock_seconds;
 extern volatile uint8_t clock_running;
-extern volatile uint8_t clock_changed;      /* set every second; the reader clears it */
+extern volatile uint8_t clock_changed;      /* set every second and by clock_add; the reader clears it */
 
 void clock_init(void);
 void clock_start(uint16_t seconds);         /* runs from `seconds` */

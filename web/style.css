@@ -1,0 +1,265 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* The game's own colours: navy lines on cream, terracotta sums, blue ink. */
+
+:root {
+  color-scheme: dark;
+  --navy: #1e2440;
+  --deep: #141a30;
+  --line: #2c3458;
+  --cream: #f8f0dc;
+  --sand: #e6d4a8;
+  --peach: #f0b070;
+  --terra: #d8643c;
+  --ink: #2f5fb4;
+  --dim: #9aa0bc;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--deep); scroll-behavior: smooth; }
+body {
+  margin: 0; min-width: 320px;
+  background: radial-gradient(circle at 50% 18rem, #262e52, transparent 38rem), var(--deep);
+  color: var(--cream); font-family: var(--mono); letter-spacing: .03em; line-height: 1.6;
+}
+a { color: inherit; }
+button { font: inherit; letter-spacing: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--peach); outline-offset: 3px; }
+
+/* --- header ---------------------------------------------------------- */
+
+.masthead {
+  width: min(1100px, calc(100% - 2rem)); margin: 0 auto; padding: 1.2rem 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.wordmark { display: flex; align-items: center; gap: .6rem; font-weight: 700; text-decoration: none; }
+.wordmark .dim { color: var(--dim); font-weight: 400; }
+.clue {
+  width: 1.3rem; height: 1.3rem; background: linear-gradient(to top right, var(--navy) 50%, var(--terra) 50%);
+  border: 2px solid var(--cream);
+}
+.header-actions { display: flex; align-items: center; gap: clamp(.8rem, 3vw, 2rem); }
+.masthead nav { display: flex; gap: clamp(.8rem, 3vw, 2rem); }
+.masthead nav a { color: var(--dim); font-size: .75rem; text-decoration: none; }
+.masthead nav a:hover, .masthead nav a:focus { color: var(--cream); }
+
+/* --- intro ----------------------------------------------------------- */
+
+.intro { width: min(760px, calc(100% - 2rem)); margin: 3.5rem auto 2rem; text-align: center; }
+.eyebrow { margin: 0; color: var(--peach); font-size: .72rem; letter-spacing: .14em; }
+.intro h1 { margin: 1.2rem 0; }
+.intro h1 img { width: min(560px, 100%); height: auto; image-rendering: pixelated; }
+.lede { margin: 0 auto; max-width: 36rem; color: var(--sand); }
+.intro-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem; margin-top: 1.8rem; }
+.button {
+  display: inline-block; padding: .7rem 1.1rem; font-size: .8rem; font-weight: 700; text-decoration: none;
+  color: var(--cream); border: 2px solid var(--cream); border-radius: .2rem;
+}
+.button.primary { color: var(--navy); background: var(--peach); border-color: var(--peach); }
+.button:hover, .button:focus { color: var(--navy); background: var(--cream); border-color: var(--cream); }
+
+/* --- the handheld ---------------------------------------------------- */
+
+/* Laid out in millimetres after the original Game Boy (90 x 148 mm), with
+ * --mm the pixels a millimetre (app.js: the screen, 56 mm wide, is a whole
+ * multiple of 160 device pixels). A part gives its centre (--x, --y) and
+ * size (--w, --h). */
+.play { width: min(1100px, calc(100% - 1rem)); margin: 0 auto; padding: 1rem 0 2rem; scroll-margin-top: .5rem; }
+.console {
+  --mm: 4px;
+  --body: #f1e8d2; --body-edge: #d6c7a4; --well: rgba(90, 70, 30, .10);
+  --bezel: #2a3150; --bezel-text: #9aa0bc; --stripe: var(--terra);
+  --key: var(--navy); --round: var(--terra); --text: var(--terra); --brand: var(--navy);
+  position: relative; width: calc(90 * var(--mm)); height: calc(148 * var(--mm)); margin: 0 auto;
+  background: linear-gradient(170deg, var(--body) 30%, var(--body-edge));
+  border-radius: calc(4 * var(--mm)) calc(4 * var(--mm)) calc(18 * var(--mm)) calc(4 * var(--mm));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55), inset 0 calc(-.8 * var(--mm)) 0 rgba(0, 0, 0, .12),
+              inset 0 calc(.4 * var(--mm)) 0 rgba(255, 255, 255, .45);
+  font-family: var(--mono); font-weight: 700;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  transition: background .3s;
+}
+.console.dmg {
+  --body: #d3cfc7; --body-edge: #b4afa6; --well: rgba(40, 40, 60, .10);
+  --bezel: #5b5d6e; --bezel-text: #c9c9d6; --stripe: #8a2a5e;
+  --key: #2b2b30; --round: #a3245f; --text: #3a3580; --brand: #3a3580;
+}
+.console:focus { outline: none; }
+.console:focus-visible { outline: 3px solid var(--peach); outline-offset: 6px; }
+.console > * {
+  position: absolute; margin: 0;
+  left: calc((var(--x) - var(--w) / 2) * var(--mm)); top: calc((var(--y) - var(--h) / 2) * var(--mm));
+  width: calc(var(--w) * var(--mm)); height: calc(var(--h) * var(--mm));
+}
+
+/* the ridge along the top, with the power switch's legend */
+.groove { --x: 45; --y: 7; --w: 90; --h: .5; background: rgba(0, 0, 0, .12); }
+.groove::before, .groove::after {
+  content: ""; position: absolute; bottom: 0; width: calc(.5 * var(--mm)); height: calc(7 * var(--mm));
+  background: rgba(0, 0, 0, .12);
+}
+.groove::before { left: calc(5 * var(--mm)); }
+.groove::after { right: calc(5 * var(--mm)); }
+.switch { --x: 18; --y: 3.6; --w: 20; --h: 3; font-size: calc(1.9 * var(--mm)); color: rgba(0, 0, 0, .3); white-space: nowrap; }
+
+/* the bezel round the screen, its bottom right corner rounded */
+.bezel {
+  --x: 45; --y: 41; --w: 76; --h: 62; background: var(--bezel);
+  border-radius: calc(2 * var(--mm)) calc(2 * var(--mm)) calc(12 * var(--mm)) calc(2 * var(--mm));
+}
+.bezel-label {
+  position: absolute; left: calc(4 * var(--mm)); right: calc(4 * var(--mm)); top: calc(1.6 * var(--mm));
+  display: flex; align-items: center; gap: calc(1.5 * var(--mm)); margin: 0;
+  color: var(--bezel-text); font-size: calc(1.8 * var(--mm)); font-style: italic; white-space: nowrap;
+}
+.bezel-label::before, .bezel-label::after { content: ""; flex: 1; height: calc(.45 * var(--mm)); background: var(--stripe); }
+.led {
+  position: absolute; left: calc(3.9 * var(--mm)); top: calc(24.9 * var(--mm));
+  width: calc(2.2 * var(--mm)); height: calc(2.2 * var(--mm)); border-radius: 50%; background: #3b1a1a;
+}
+.led.on { background: #ff4a3c; box-shadow: 0 0 calc(1.5 * var(--mm)) #ff4a3c; }
+.led-label {
+  position: absolute; left: calc(1 * var(--mm)); width: calc(8 * var(--mm)); top: calc(28.4 * var(--mm));
+  color: var(--bezel-text); font-size: calc(1.4 * var(--mm)); text-align: center;
+}
+
+/* the screen: 160 x 144 at a whole scale, so its exact size comes from app.js */
+.screen { --x: 45; --y: 41.2; --w: 56; --h: 50.4; background: #0c0f1c; }
+.screen canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+.overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 1rem;
+  background: rgba(20, 26, 48, .82); color: var(--cream); font-size: .75rem; font-weight: 400; text-align: center;
+}
+.overlay[hidden] { display: none; }
+.console.ready .overlay { cursor: pointer; background: #0c0f1c; color: var(--sand); letter-spacing: .08em; line-height: 1.8; }
+.console.ready .overlay span { animation: blink 1.2s steps(2, jump-none) infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+.brand {
+  --x: 22; --y: 77.5; --w: 30; --h: 6;
+  color: var(--brand); font-size: calc(4.6 * var(--mm)); font-style: italic; letter-spacing: .02em; line-height: 1;
+}
+.brand span { margin-left: calc(1.2 * var(--mm)); font-size: calc(2.2 * var(--mm)); font-style: normal; color: var(--text); }
+
+/* the D-pad in its round well */
+.dpad-well { --x: 21; --y: 100; --w: 28; --h: 28; border-radius: 50%; background: var(--well); }
+.dpad { --x: 21; --y: 100; --w: 23; --h: 23; }
+.dpad > * {
+  position: absolute; padding: 0; border: 0; background: var(--key);
+  width: calc(7.6 * var(--mm)); height: calc(7.6 * var(--mm));
+}
+.dpad .up { left: calc(7.7 * var(--mm)); top: 0; border-radius: calc(.8 * var(--mm)) calc(.8 * var(--mm)) 0 0; }
+.dpad .down { left: calc(7.7 * var(--mm)); bottom: 0; border-radius: 0 0 calc(.8 * var(--mm)) calc(.8 * var(--mm)); }
+.dpad .left { left: 0; top: calc(7.7 * var(--mm)); border-radius: calc(.8 * var(--mm)) 0 0 calc(.8 * var(--mm)); }
+.dpad .right { right: 0; top: calc(7.7 * var(--mm)); border-radius: 0 calc(.8 * var(--mm)) calc(.8 * var(--mm)) 0; }
+.dpad .up, .dpad .down { height: calc(7.8 * var(--mm)); }
+.dpad .left, .dpad .right { width: calc(7.8 * var(--mm)); }
+.dpad .hub { left: calc(7.7 * var(--mm)); top: calc(7.7 * var(--mm)); }
+.dpad .hub::after {
+  content: ""; position: absolute; inset: calc(1.8 * var(--mm)); border-radius: 50%;
+  box-shadow: inset 0 calc(.3 * var(--mm)) calc(.6 * var(--mm)) rgba(0, 0, 0, .6);
+}
+.dpad button::after {
+  content: ""; position: absolute; inset: 0; margin: auto; width: 0; height: 0;
+  border: calc(1.1 * var(--mm)) solid transparent; opacity: .3;
+}
+.dpad .up::after { border-bottom-color: #fff; margin-top: calc(1.6 * var(--mm)); }
+.dpad .down::after { border-top-color: #fff; margin-bottom: calc(1.6 * var(--mm)); }
+.dpad .left::after { border-right-color: #fff; margin-left: calc(1.6 * var(--mm)); }
+.dpad .right::after { border-left-color: #fff; margin-right: calc(1.6 * var(--mm)); }
+
+/* A and B on a line rising 25 degrees, in a well */
+.ab-well {
+  --x: 67.5; --y: 97; --w: 31; --h: 14; border-radius: calc(7 * var(--mm));
+  background: var(--well); transform: rotate(-25deg);
+}
+.round {
+  padding: 0; border: 0; border-radius: 50%; background: var(--round);
+  box-shadow: 0 calc(.7 * var(--mm)) 0 rgba(0, 0, 0, .25), inset 0 calc(.5 * var(--mm)) 0 rgba(255, 255, 255, .18);
+}
+.round.b { --x: 60; --y: 100.5; --w: 10.5; --h: 10.5; }
+.round.a { --x: 75; --y: 93.5; --w: 10.5; --h: 10.5; }
+.label { color: var(--text); font-size: calc(2.8 * var(--mm)); line-height: 1; text-align: center; transform: rotate(-25deg); }
+.label-b { --x: 63.4; --y: 108.3; --w: 6; --h: 3; }
+.label-a { --x: 78.4; --y: 101.3; --w: 6; --h: 3; }
+
+/* SELECT and START side by side, each tilted */
+.pill {
+  --y: 124; --w: 12.5; --h: 3.6; padding: 0; border: 0; border-radius: calc(1.8 * var(--mm));
+  background: var(--key); transform: rotate(-25deg);
+  box-shadow: 0 0 0 calc(1.1 * var(--mm)) var(--well);
+}
+.pill.select { --x: 38; }
+.pill.start { --x: 53; }
+.label-select, .label-start { --y: 128.6; --w: 12; --h: 2.4; font-size: calc(1.9 * var(--mm)); letter-spacing: .08em; }
+.label-select { --x: 40; }
+.label-start { --x: 55; }
+
+/* the speaker: six slots in the rounded corner */
+.speaker {
+  --x: 72; --y: 128.5; --w: 20.3; --h: 13;
+  display: flex; justify-content: space-between; transform: rotate(30deg);
+}
+.speaker i {
+  width: calc(1.8 * var(--mm)); border-radius: calc(.9 * var(--mm));
+  background: rgba(0, 0, 0, .16); box-shadow: inset 0 calc(.4 * var(--mm)) calc(.4 * var(--mm)) rgba(0, 0, 0, .25);
+}
+
+.dpad, .round, .pill { touch-action: none; }     /* a thumb on them is not a scroll */
+.console [data-button].pressed { filter: brightness(1.45); }
+.round.pressed { box-shadow: 0 calc(.2 * var(--mm)) 0 rgba(0, 0, 0, .25); }
+
+/* --- settings -------------------------------------------------------- */
+
+.settings { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin-top: 2.2rem; }
+.settings button, .model button {
+  padding: .5rem .8rem; font-size: .72rem; color: var(--cream);
+  background: var(--navy); border: 1px solid var(--line); border-radius: .2rem;
+}
+.settings button:hover { border-color: var(--cream); }
+.model { display: flex; }
+.model button:first-child { border-radius: .2rem 0 0 .2rem; }
+.model button:last-child { border-radius: 0 .2rem .2rem 0; border-left: 0; }
+.model button[aria-checked="true"] { color: var(--navy); background: var(--peach); border-color: var(--peach); font-weight: 700; }
+#sound[aria-pressed="false"] { color: var(--dim); }
+.status { margin: 1rem auto 0; color: var(--dim); font-size: .75rem; text-align: center; }
+
+/* --- text sections --------------------------------------------------- */
+
+.about, .shots, .more { width: min(760px, calc(100% - 2rem)); margin: 3.5rem auto 0; }
+h2 { margin: 0 0 1rem; color: var(--peach); font-size: .9rem; letter-spacing: .14em; text-transform: uppercase; }
+.about p { color: var(--sand); }
+.keys { width: 100%; margin: 1.4rem 0; border-collapse: collapse; font-size: .8rem; }
+.keys th { color: var(--dim); font-weight: 400; text-align: left; }
+.keys th, .keys td { padding: .5rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.keys td:first-child { font-weight: 700; white-space: nowrap; }
+kbd {
+  display: inline-block; min-width: 1.6rem; margin: 0 .15rem .2rem 0; padding: 0 .35rem;
+  font: inherit; text-align: center; color: var(--navy); background: var(--cream);
+  border-radius: .2rem; box-shadow: 0 2px 0 var(--sand);
+}
+.shots { width: min(1100px, calc(100% - 2rem)); }
+.shot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: 1rem; }
+.shot-grid figure { margin: 0; }
+.shot-grid img { display: block; width: 100%; height: auto; image-rendering: pixelated; border: 2px solid var(--line); }
+.shot-grid figcaption { margin-top: .4rem; color: var(--dim); font-size: .72rem; }
+.more nav { display: flex; flex-wrap: wrap; gap: .6rem; }
+.more a { padding: .55rem .9rem; font-size: .8rem; text-decoration: none; border: 1px solid var(--line); border-radius: .2rem; }
+.more a:hover, .more a:focus { border-color: var(--cream); }
+
+footer {
+  width: min(1100px, calc(100% - 2rem)); margin: 4rem auto 0; padding: 1.4rem 0 2.4rem;
+  border-top: 1px solid var(--line); color: var(--dim); font-size: .7rem; text-align: center;
+}
+footer p { margin: .3rem 0; }
+
+@media (max-width: 520px) {
+  .masthead { flex-wrap: wrap; }
+  .wordmark .dim { display: none; }
+  .keys th:nth-child(2), .keys td:nth-child(2) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .console { transition: none; }
+  .console.ready .overlay span { animation: none; }
+}

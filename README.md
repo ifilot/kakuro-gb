@@ -2,61 +2,70 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](CHANGELOG.md)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
+[![Language: C](https://img.shields.io/badge/language-C-A8B9CC.svg?logo=c&logoColor=white)](src)
 
-Kakuro, the number crossword, for the original Game Boy. There are 150
-puzzles, from 6x6 to 10x10, in a 32 KiB ROM; the progress of every puzzle
-and its best time are kept in the cartridge's battery-backed RAM.
+Kakuro, the number crossword, for the Game Boy, in colour on the Game Boy
+Color. There are 80 puzzles, from 6x6 to 8x8, in a 32 KiB ROM-only
+cartridge without battery RAM: nothing is saved. Best times last until the
+Game Boy is switched off, and a puzzle left unsolved is not kept at all.
+
+[Play it in your browser](https://ifilot.github.io/kakuro-gb/), in the
+[binjgb](https://github.com/binji/binjgb) emulator, on a Game Boy or a Game
+Boy Color.
 
 <p align="center">
-  <img src="docs/title.png" alt="Title screen" width="32%">
-  <img src="docs/grid.png" alt="Choosing a puzzle" width="32%">
-  <img src="docs/playing.png" alt="A 9x9 puzzle in progress" width="32%">
+  <img src="docs/start.png" alt="The start screen: a zen garden" width="24%">
+  <img src="docs/title.png" alt="Title screen: the groups of puzzles" width="24%">
+  <img src="docs/grid.png" alt="Choosing a puzzle" width="24%">
+  <img src="docs/playing.png" alt="An 8x8 puzzle in progress" width="24%">
 </p>
 <p align="center">
-  <img src="docs/keypad.png" alt="Entering a digit with the keypad" width="32%">
-  <img src="docs/combinations.png" alt="The combinations of the cursor's runs" width="32%">
-  <img src="docs/solved.png" alt="A solved puzzle with a new best time" width="32%">
+  <img src="docs/keypad.png" alt="Entering a digit with the keypad" width="24%">
+  <img src="docs/combinations.png" alt="The combinations of the cursor's runs" width="24%">
+  <img src="docs/pause.png" alt="The pause menu" width="24%">
+  <img src="docs/quit.png" alt="Quitting a puzzle: it is not kept" width="24%">
+</p>
+<p align="center">
+  <img src="docs/wave.png" alt="The wave from a solved puzzle to the overview" width="24%">
+  <img src="docs/solved.png" alt="The overview after a solved puzzle" width="24%">
+  <img src="docs/color_keypad.png" alt="On a Game Boy Color: a puzzle in progress" width="24%">
+  <img src="docs/color_grid.png" alt="On a Game Boy Color: choosing a puzzle" width="24%">
 </p>
 
 ## Play
 
-Load `build/kakuro.gb` in an emulator (mGBA, SameBoy, BGB, ...) or put it on
-a flash cartridge. It is an MBC1 cartridge with 8 KiB of battery RAM.
+Load `build/kakuro.gb` in an emulator (mGBA, SameBoy, BGB, ...) or on a
+flash cartridge. It plays in colour on the Game Boy Color and in shades on
+the others.
 
-Fill every white cell with a digit from 1 to 9. The digits of a run of
-white cells, across or down, add up to the sum in the black cell before it:
-the sum in the upper-right triangle belongs to the run to its right, the one
-in the lower-left triangle to the run below it. No digit occurs twice in a
-run. Digits on a grey cell are given and cannot be changed. The puzzle is
-solved when every cell is filled and every run adds up; every puzzle has
-exactly one solution.
+Fill every white cell with a digit from 1 to 9 so that each run of white
+cells adds up to the sum before it: the upper-right triangle is the sum of
+the run to its right, the lower-left one of the run below. No digit repeats
+within a run, and grey cells are given. Every puzzle has exactly one
+solution.
 
 | Button | On the board |
 | --- | --- |
-| D-pad | Move the cursor to the nearest white cell in that direction |
-| A | Open the keypad: D-pad to choose 1-9 or the erase key (x), A to put it, B to cancel |
+| D-pad | Move to the nearest white cell in that direction |
+| A | Keypad: choose 1-9 or erase (x), A to put it, B to cancel |
 | B | Wipe the cell |
-| SELECT | Combinations of the cursor's runs (SELECT or B closes) |
-| START | Pause menu: resume, reveal the cell (+30 seconds), start over, quit to the menu |
+| SELECT | Combinations of the cursor's runs |
+| START | Pause: resume, reveal the cell (+30 seconds), start over, music, quit |
 
-The status line under the board shows the sum and length of the cursor's
-run across (`→20/4`) and down (`↓16/2`) and the clock. The combinations
-panel lists every set of different digits that makes each sum; a set that
-lacks a digit already in the run is dim. Below them are the digits the cell
-can still take, given both runs. When the last cell is filled but a run
-does not add up, the status line says `NOT YET RIGHT`.
+The status line shows the cursor's runs (`→20/4`, `↓16/2`) and the clock.
+When stuck, SELECT lists every combination that makes each sum, plus the
+digits the cell can still take.
 
-The title screen offers CONTINUE when the last puzzle played is in
-progress. CHOOSE PUZZLE lists the groups of one size and difficulty with
-the number solved, then the puzzles of a group with a preview, the best
-time and whether it is solved (✓) or in progress (■). Every entry is saved
-at once and the clock every second, so switching off loses nothing.
+On the title screen choose a size and difficulty, then a puzzle; solved
+ones get a check mark. Nothing is saved: a puzzle is played in one go
+(quitting loses it, so the game asks first), and best times last until the
+Game Boy is switched off.
 
 ## Puzzles
 
 The puzzles come from [kakuro-8bit](https://github.com/ifilot/kakuro-8bit)
 (`assets/puzzles/e5`). That project also forbids two runs from using the
-same set of digits; with the standard rules alone, 64 of them have more
+same set of digits; with the standard rules alone, 26 of them have more
 than one solution. `tools/gen_puzzles.py` adds givens from the stored
 solution (1 to 3 per puzzle) until each has exactly one.
 
@@ -67,17 +76,10 @@ solution (1 to 3 per puzzle) until each has exactly one.
 | 31-40 | 7 x 7 | ★★★ |
 | 41-60 | 8 x 8 | ★★ |
 | 61-80 | 8 x 8 | ★★★ |
-| 81-100 | 9 x 9 | ★★ |
-| 101-121 | 9 x 9 | ★★★ |
-| 122-126 | 10 x 10 | ★★ |
-| 127-145 | 10 x 10 | ★★★ |
-| 146-148 | 10 x 10 | ★★★★ |
-| 149-150 | 10 x 10 | ★★★★★ |
 
-A cell is 16x16 dots. The sum row and column show only the halves that hold
-sums, so an n x n grid is (2n-1) tiles square: up to 9x9 fits the 160x136
-dots above the status line, and a 10x10 grid (152 dots) scrolls by one cell
-with the cursor.
+A cell is 16x16 dots, so an 8x8 grid (128 dots) fits the 160x136 dots above
+the status line whole. kakuro-8bit's 9x9 and 10x10 puzzles would not, and
+are left out.
 
 ## Build
 
@@ -90,7 +92,9 @@ curl -sL https://github.com/gbdk-2020/gbdk-2020/releases/download/4.5.0/gbdk-lin
 make                  # -> build/kakuro.gb, and the ROM space used
 ```
 
-The tests, screenshots and `make run` use [PyBoy](https://github.com/Baekalfen/PyBoy):
+`make run` plays it in [mGBA](https://mgba.io) (`sudo apt install mgba-qt`;
+`MGBA=` names another binary). The tests and screenshots use
+[PyBoy](https://github.com/Baekalfen/PyBoy):
 
 ```sh
 python3 -m venv ~/.venvs/pyboy && ~/.venvs/pyboy/bin/pip install pyboy pillow
@@ -100,43 +104,23 @@ make test PYTHON=~/.venvs/pyboy/bin/python
 | Target | |
 | --- | --- |
 | `make` | Build `build/kakuro.gb` |
-| `make run` | Play in PyBoy (arrows; A = `a`, B = `s`, START = Return, SELECT = Backspace) |
+| `make run` | Play in mGBA (arrows; A = `x`, B = `z`, START = Return, SELECT = Backspace) |
 | `make test` | Every puzzle solved in the emulator, see below |
 | `make screenshots` | Every screen -> `build/screens/` |
 | `make docs` | The pictures above, in Game Boy green -> `docs/` |
 | `make puzzles` | Regenerate `src/puzzles.[ch]` from `assets/puzzles` |
 | `make gfx` | Regenerate `src/gfx.[ch]`; tile sheet in `build/gfx_preview.png` |
+| `make music` | Regenerate `src/music.[ch]` from the notes in `tools/gen_music.py` |
+| `make listen` | The music as PyBoy plays it -> `build/music.wav` |
+| `make site` | The website, the game in the browser -> `_site/` (checked) |
+| `make serve` | The website at http://localhost:8000 |
 
-`make test` plays all 150 puzzles in order with the D-pad and the keypad,
-as a player would. For each it checks the puzzle in memory (cells, givens,
-sums, runs) against `src/puzzles.c` and against the `.puz` files, every
-tile of the board on screen, every cursor step against a model of the
-cursor rule, and that a wrong filling is refused (every tenth puzzle). It
-also checks the combinations panel, wiping cells, given digits being
-locked, the hint and starting over, progress and clock surviving a power
-cycle through CONTINUE, the marks on the puzzle grid, the best times in
-battery RAM, and battery RAM full of garbage at the first start.
-
-With the 150 puzzles (5.3 KiB) the ROM uses about 24 KiB of its 32 KiB.
-
-## Layout
-
-| File | Contents |
-| --- | --- |
-| `src/main.c` | Start-up and the screens |
-| `src/game.c` | Playing a puzzle: buttons, cursor movement, entering digits, solved, hint, start over |
-| `src/puzzle.c` | Loading a puzzle, its sums and runs, the solved test, combinations of a sum |
-| `src/board.c` | The board on the background layer, scrolling, the cursor and keypad sprites |
-| `src/panel.c` | The window layer: status line, combinations, pause menu, solved |
-| `src/menu.c` | Title, groups, puzzle grid with preview, rules |
-| `src/save.c` | Battery RAM: best times, progress per puzzle, the last puzzle |
-| `src/clock.c` | The game clock from the timer interrupt (16 Hz) |
-| `src/input.c` | Buttons, with repeat for the D-pad |
-| `src/sound.c` | Sound effects and the jingle for a solved puzzle |
-| `src/video.c` | Tile loading, text, number formatting, fades |
-| `src/puzzles.c`, `src/gfx.c` | Generated puzzle data and tiles |
-| `assets/puzzles/` | The puzzle files from kakuro-8bit |
-| `tools/` | Puzzle and tile generators, PyBoy harness, tests, screenshots |
+Every push, to any branch, builds the ROM and runs `make test`
+(`.github/workflows/build.yml`); a tag `v<version>`, matching
+`src/version.h`, also publishes a release with the ROM, a zip and that
+version's CHANGELOG section. Every push to `master` builds the website and
+deploys it to GitHub Pages (`.github/workflows/pages.yml`); Pages must use
+GitHub Actions as its source.
 
 ## License
 
