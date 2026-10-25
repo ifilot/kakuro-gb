@@ -28,7 +28,12 @@ void status_draw(void);                     /* sums of the cursor's runs */
 void status_time(void);                     /* the clock */
 void status_note(const char *text);         /* replaces the sums */
 
-void panel_info(uint8_t k);                 /* puzzle k, best time, combinations of the cursor's runs */
+/* Puzzle k and the combinations of the cursor's runs, over the board: call
+ * panel_info_draw() every frame while it is open (it draws the panel once it
+ * covers the board) and panel_info_close() before it slides away. */
+void panel_info(uint8_t k);
+void panel_info_draw(void);
+void panel_info_close(void);
 void panel_pause(void);
 void panel_pause_choice(uint8_t choice);
 void panel_pause_music(void);               /* the music item, after it changed */
@@ -41,5 +46,6 @@ void panel_quit_choice(uint8_t choice);
  * new one, and how many of each group are solved, on a card filling the
  * window. Draw it with the window out of sight; wave_in() brings it in. */
 void panel_overview(uint8_t k, uint16_t seconds, uint16_t best, uint8_t record);
+void panel_overview_counts(void);           /* the rest, once wave_in() has covered the board */
 
 #endif

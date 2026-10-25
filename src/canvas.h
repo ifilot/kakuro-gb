@@ -24,5 +24,6 @@ uint8_t canvas_tiny_width(const char *s);
 /* Loads the canvas into the tiles from `first` on (cw x ch of them) and puts
  * them at map tile (x, y). */
 void canvas_show(uint8_t first, uint8_t x, uint8_t y);
+void canvas_show_win(uint8_t first, uint8_t x, uint8_t y);  /* the same on the window */
 
 #endif

@@ -227,14 +227,12 @@ def encode(tile):
 
 # --- background tiles -----------------------------------------------------
 
-def font_tiles(color=B, only_digits=False):
+def font_tiles():
     out = []
     for code in range(FONT_FIRST, FONT_FIRST + FONT_COUNT):
         ch = chr(code)
-        if only_digits and not "1" <= ch <= "9":
-            continue
         t = blank()
-        stamp(t, FONT.get(ch, []), 1, 0, L if ch == "@" else color)
+        stamp(t, FONT.get(ch, []), 1, 0, L if ch == "@" else B)
         out.append(t)
     return out
 
@@ -358,6 +356,29 @@ def scene_colours():
 
 
 # --- menus ------------------------------------------------------------------
+
+def chip_tiles():
+    """The cells of the combinations panel (panel.c), a tile each: for each
+    of fitting, placed and dim, digits 1-9. A 7x7 box in the tile's top
+    left (the dot after it the gap to the next), the 3x5 digit in it: black
+    on light grey; white on dark grey (a digit already in the run); light
+    grey without a box (a combination that no longer fits). Then a divider
+    between the panel's parts: a light grey line across the middle."""
+    out = []
+    for box, ink in ((L, B), (D, W), (None, L)):
+        for d in range(1, 10):
+            t = blank()
+            if box is not None:
+                for y in range(7):
+                    for x in range(7):
+                        t[y][x] = box
+            stamp(t, SMALL[d], 2, 1, ink)
+            out.append(t)
+    rule = blank()
+    for x in range(8):
+        rule[3][x] = L
+    return out + [rule]
+
 
 def preview_tiles():
     """A puzzle's preview at 8 dots a cell, a tile each, with the board's
@@ -506,7 +527,6 @@ def c_array(name, data, per_line=16):
 
 def main() -> int:
     font = font_tiles()
-    dim = font_tiles(L, only_digits=True)
     bt = board_tiles()
 
     index = {}
@@ -517,7 +537,6 @@ def main() -> int:
         order.extend(tiles)
 
     add("FONT", font)
-    add("DIM", dim)
     add("BLACK", [bt["black"]])
     add("TL", bt["tl"])
     add("BR", bt["br"])
@@ -603,7 +622,10 @@ def main() -> int:
           f"#define SPRITE_TILE_COUNT {len(sprites)}", "",
           "/* The Color's DIGIT and GIVEN tiles (the digit dark grey), from T_DIGIT on. */",
           f"#define CGB_CELL_COUNT {len(bt['cgb_cells'])}",
-          "extern const unsigned char cgb_cell_tiles[];", "",
+          "/* The combinations panel's cells: fitting, placed, dim, digits 1-9 each;",
+          " * then its divider. */",
+          "#define CHIP_TILE_COUNT 28",
+          "extern const unsigned char cgb_cell_tiles[], chip_tiles[];", "",
           "/* The wave: line y starts wave_delay[y % WAVE_PERIOD] dots of progress late;",
           " * after p dots of progress a line has come wave_ease[p] dots (0..WAVE_WIDTH). */",
           f"#define WAVE_PERIOD {WAVE_PERIOD}", f"#define WAVE_LINES {WAVE_LINES}", f"#define WAVE_WIDTH {WAVE_WIDTH}",
@@ -619,6 +641,7 @@ def main() -> int:
          c_array("frame_tiles", b"".join(encode(t) for t in frame_tiles)),
          c_array("sprite_tiles", b"".join(encode(t) for t in sprites)),
          c_array("cgb_cell_tiles", b"".join(encode(t) for t in bt["cgb_cells"])),
+         c_array("chip_tiles", b"".join(encode(t) for t in chip_tiles())),
          c_array("frame_map", bytes(frame_map), 20),
          c_array("logo_empty", bytes(logo_empty), 20),
          c_array("scene_tiles", b"".join(encode(t) for t in s_tiles)),

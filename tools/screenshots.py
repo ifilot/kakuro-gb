@@ -69,7 +69,7 @@ def main() -> int:
     game.press("a", after=10)
     save(game, "keypad")
     game.press("b", after=10)
-    game.press("select", after=30)
+    game.press("select", after=60)         # the runs come once it covers the board
     save(game, "combinations")
     game.press("select", after=30)
     game.press("start", after=30)
@@ -92,7 +92,7 @@ def main() -> int:
         game.wait(1)
     game.wait(12)
     save(game, "wave")
-    game.wait(60)
+    game.wait(90)                           # the counts come after the wave
     save(game, "solved")
     game.stop()
 

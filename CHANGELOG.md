@@ -23,11 +23,13 @@ and the project uses [semantic versioning](https://semver.org/).
   group opens its puzzles as cells (solved ones with a check mark) beside
   the chosen puzzle's preview, best time and state.
 - The board of 16x16-dot cells with 3x5-dot sums; digit entry with a sprite
-  keypad; the combinations of the cursor's runs and the digits the cell can
-  take; a pause menu with a hint (+30 seconds), starting over, the music
+  keypad; a panel with the combinations of the cursor's runs as strips of
+  cells (the digits already placed dark, the combinations that no longer
+  fit light) and the digits the cell can take; a pause menu with a hint (+30 seconds), starting over, the music
   on or off and quitting.
-- A solved puzzle leads on a wave, line by line, to an overview: the time,
-  the best time and the number solved, in all and per group.
+- A solved puzzle leads on a wave, line by line, to an overview: the time
+  (a banner for a new best), and the number solved in all and per group,
+  with bars.
 - Background music, a tune and a bass on channels 2 and 3, and sound
   effects.
 - Nothing is saved (no battery RAM): best times last until switching off,

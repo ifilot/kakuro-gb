@@ -88,6 +88,7 @@ static void solved(void)
     }
     panel_overview(current, seconds, best, record);
     wave_in();
+    panel_overview_counts();
     input_flush();
     state = M_SOLVED;
 }
@@ -251,8 +252,11 @@ uint8_t game_play(void)
             break;
 
         case M_INFO:
-            if (pressed & (J_SELECT | J_B | J_A | J_START))
+            if (pressed & (J_SELECT | J_B | J_A | J_START)) {
+                panel_info_close();
                 close_panel();
+            } else
+                panel_info_draw();
             break;
 
         case M_PAUSE:

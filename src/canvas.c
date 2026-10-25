@@ -173,13 +173,26 @@ uint8_t canvas_tiny_width(const char *s)
     return w;
 }
 
-void canvas_show(uint8_t first, uint8_t x, uint8_t y)
+static void show(uint8_t first, uint8_t x, uint8_t y, uint8_t window)
 {
     uint8_t row[20], r, c;
     vram_tiles(first, cw * ch, buf);
     for (r = 0; r < ch; r++) {
         for (c = 0; c < cw; c++)
             row[c] = first++;
-        set_bkg_tiles(x, y + r, cw, 1, row);
+        if (window)
+            set_win_tiles(x, y + r, cw, 1, row);
+        else
+            set_bkg_tiles(x, y + r, cw, 1, row);
     }
+}
+
+void canvas_show(uint8_t first, uint8_t x, uint8_t y)
+{
+    show(first, x, y, 0);
+}
+
+void canvas_show_win(uint8_t first, uint8_t x, uint8_t y)
+{
+    show(first, x, y, 1);
 }

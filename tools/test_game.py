@@ -143,16 +143,11 @@ def expected_map(p: dict, cells: list[int]) -> list[list[int]]:
 # --- reading the screen -----------------------------------------------------
 
 def map_text(game: Game, base: int, row: int) -> str:
-    """A map row as text; dim digits come out as lower-case a-i."""
+    """A map row as text (the font's tiles; any other one is ?)."""
     out = []
     for x in range(20):
         t = game.reg(base + 32 * row + x)
-        if t < 64:
-            out.append(chr(t + 32))
-        elif t < 73:
-            out.append(chr(ord("a") + t - 64))
-        else:
-            out.append("?")
+        out.append(chr(t + 32) if t < 64 else "?")
     return "".join(out)
 
 
@@ -257,9 +252,13 @@ def solve(game: Game, k: int, p: dict, wrong_first: bool) -> None:
     shown, waved = wait_overview(game)
     check(waved, f"puzzle {k + 1}: no wave after solving")
     check(shown, f"puzzle {k + 1}: overview did not show")
-    rows = [map_text(game, WIN_MAP, y)[1:19] for y in range(18)]
-    check(rows[2].strip() == "SOLVED!", f"puzzle {k + 1}: no SOLVED! on the overview")
-    check(rows[8].strip() == f"SOLVED     {k + 1:2}/{PUZZLE_COUNT}", f"puzzle {k + 1}: overview {rows[8]!r}")
+    # src/panel.c: the title on its canvas (from tile 1) at row 2, the counts
+    # (from T_BLACK + 1) from row 8, after the wave
+    game.wait(30)
+    check(game.reg(WIN_MAP + 32 * 2 + 1) == 1, f"puzzle {k + 1}: no title on the overview")
+    check(game.reg(WIN_MAP + 32 * 8 + 1) == GFX["T_BLACK"] + 1, f"puzzle {k + 1}: no counts on the overview")
+    check(game.reg(WIN_MAP) == GFX["T_BLACK"] and vram_matches(game, GFX["T_BLACK"], GFX["T_BLACK"]),
+          f"puzzle {k + 1}: the overview's frame not black")
 
 
 def combos(total: int, length: int) -> list[str]:
@@ -277,46 +276,45 @@ def check_panel(game: Game, p: dict) -> None:
     check(status_text(game) == " ".join(labels), f"status line {status_text(game)!r}, want {' '.join(labels)!r}")
     game.press("select", after=2)
     check(wait_panel(game, 0), "combinations panel did not open")
-    rows = [map_text(game, WIN_MAP, y) for y in range(18)]
-    text = "\n".join(rows)
-    y = 4
-    possible = set(range(1, 10))
-    for across, arrow in ((True, "["), (False, "\\")):
-        head = p["head_a" if across else "head_d"][cur]
+    game.wait(25)                                # drawn once it covers the board
+    # src/panel.c: what the panel shows, per run (0 across, 1 down)
+    possible = 0x3FE
+    for r, key in ((0, "a"), (1, "d")):
+        head = p["head_" + key][cur]
+        count = game.byte("info_count", r)
         if head == 0xFF:
-            check(rows[y].startswith(arrow + " NO SUM"), f"panel: no-sum line at row {y}: {rows[y]!r}")
-            y += 2
+            check(count == 0xFF, f"panel: run {key} has no sum, but {count} combinations")
             continue
-        total = p["sum_a" if across else "sum_d"][head]
-        length = p["len_a" if across else "len_d"][head]
-        check(rows[y].strip() == f"{arrow} {total} IN {length}", f"panel: heading {rows[y]!r}")
-        step = 1 if across else n
+        total, length = p["sum_" + key][head], p["len_" + key][head]
+        check((game.byte("info_sum", r), game.byte("info_len", r)) == (total, length),
+              f"panel: run {key} {game.byte('info_sum', r)} in {game.byte('info_len', r)}, want {total} in {length}")
+        step = 1 if r == 0 else n
         run = [head + step * (j + 1) for j in range(length)]
         placed = {cells[j] & 15 for j in run} - {0}
         others = {cells[j] & 15 for j in run if j != cur} - {0}
-        want, fits = [], set()
-        for c in combos(total, length):
+        want = combos(total, length)
+        masks = [game.byte("info_masks", 2 * (r * 12 + k)) | game.byte("info_masks", 2 * (r * 12 + k) + 1) << 8
+                 for k in range(count)]
+        got = ["".join(str(d) for d in range(1, 10) if m >> d & 1) for m in masks]
+        check(got == want, f"panel: run {key} combinations {got} != {want}")
+        dim = game.byte("info_dim", 2 * r) | game.byte("info_dim", 2 * r + 1) << 8
+        want_dim = [not placed <= set(map(int, c)) for c in want]
+        check([bool(dim >> k & 1) for k in range(len(want))] == want_dim, f"panel: run {key} dim {dim:#x}")
+        fits = 0
+        for c in want:
             digits = set(map(int, c))
-            dim = not placed <= digits
-            want.append("".join(chr(ord("a") + int(d) - 1) for d in c) if dim else c)
             if others <= digits:
-                fits |= digits - others
+                for d in digits - others:
+                    fits |= 1 << d
         possible &= fits
-        got = []
-        y += 1
-        while rows[y].strip():
-            got += rows[y].split()
-            y += 1
-        check(got == want, f"panel: combinations {got} != {want}")
-        y += 1
-    if cells[cur] & 0x10:
-        check(rows[16].startswith("GIVEN DIGIT"), f"panel: {rows[16]!r}")
-    else:
-        check(rows[16].strip() == "POSSIBLE: " + ("".join(map(str, sorted(possible))) or "NONE"),
-              f"panel: {rows[16]!r}, want {sorted(possible)}")
+        # drawn: the run's tiles in the window, from the board's (T_BLACK on)
+        check(game.reg(WIN_MAP + 32 * 4) >= GFX["T_BLACK"], "panel: the runs not drawn")
+    got = game.byte("info_fits") | game.byte("info_fits", 1) << 8
+    want = 0 if cells[cur] & 0x10 else possible
+    check(got == want, f"panel: possible digits {got:#x}, want {want:#x}")
     game.press("select", after=2)
     check(wait_panel(game, PANEL_CLOSED), "combinations panel did not close")
-    del text
+    check(vram_matches(game), "combinations panel: the font and board tiles not loaded back")
 
 
 def feature_tests(game: Game, k: int, p: dict) -> None:
@@ -371,6 +369,17 @@ def best_time(game: Game, k: int) -> int:
 def set_best(game: Game, k: int, seconds: int) -> None:
     game.poke("best_times", 2 * k, seconds & 0xFF)
     game.poke("best_times", 2 * k + 1, seconds >> 8)
+
+
+def vram_matches(game: Game, first: int = 1, last: int = GFX["GAME_TILE_COUNT"] - 1) -> bool:
+    """Whether background tiles first..last in VRAM are game_tiles' (the
+    DMG's: on the Color the digit cells are its own)."""
+    want = gfx_array("game_tiles")
+    for t in range(first, last + 1):
+        base = 0x9000 + 16 * t if t < 128 else 0x8800 + 16 * (t - 128)
+        if [game.reg(base + i) for i in range(16)] != want[16 * t:16 * t + 16]:
+            return False
+    return True
 
 
 def gfx_array(name: str) -> list[int]:

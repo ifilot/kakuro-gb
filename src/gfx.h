@@ -4,18 +4,17 @@
 
 /* Background tiles while playing (loaded at 0, BG data at 0x8800). */
 #define T_FONT     0
-#define T_DIM      64
-#define T_BLACK    73
-#define T_TL       74
-#define T_BR       78
-#define T_ACROSS   82
-#define T_DOWN     122
-#define T_WHITE    162
-#define T_DIGIT    166
-#define T_GIVEN    202
-#define T_STATUS   238
-#define GAME_TILE_COUNT 238
-#define STATUS_TILE_MAX 18
+#define T_BLACK    64
+#define T_TL       65
+#define T_BR       69
+#define T_ACROSS   73
+#define T_DOWN     113
+#define T_WHITE    153
+#define T_DIGIT    157
+#define T_GIVEN    193
+#define T_STATUS   229
+#define GAME_TILE_COUNT 229
+#define STATUS_TILE_MAX 27
 
 #define SUM_MIN 3
 /* The font covers ASCII 32..95: tile = T_FONT + ch - 32. */
@@ -56,7 +55,10 @@ extern const unsigned char logo_empty[], logo_part_x[], logo_part_w[];
 
 /* The Color's DIGIT and GIVEN tiles (the digit dark grey), from T_DIGIT on. */
 #define CGB_CELL_COUNT 72
-extern const unsigned char cgb_cell_tiles[];
+/* The combinations panel's cells: fitting, placed, dim, digits 1-9 each;
+ * then its divider. */
+#define CHIP_TILE_COUNT 28
+extern const unsigned char cgb_cell_tiles[], chip_tiles[];
 
 /* The wave: line y starts wave_delay[y % WAVE_PERIOD] dots of progress late;
  * after p dots of progress a line has come wave_ease[p] dots (0..WAVE_WIDTH). */
