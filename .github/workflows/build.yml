@@ -1,0 +1,82 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GBDK_VERSION: 4.5.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install GBDK-2020 and PyBoy
+        run: |
+          curl -sL "https://github.com/gbdk-2020/gbdk-2020/releases/download/${GBDK_VERSION}/gbdk-linux64.tar.gz" | tar xz -C "$HOME"
+          pip install pyboy pillow
+
+      - name: Build kakuro.gb
+        run: make GBDK_HOME="$HOME/gbdk"
+
+      - name: Test (every puzzle solved in the emulator)
+        run: make test GBDK_HOME="$HOME/gbdk"
+
+      - name: Package
+        run: |
+          mkdir -p release
+          cp build/kakuro.gb LICENSE README.md CHANGELOG.md release/
+          cd release && zip -9 ../kakuro-gb.zip kakuro.gb LICENSE README.md CHANGELOG.md
+          sha256sum ../kakuro-gb.zip kakuro.gb
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: kakuro-gb
+          path: |
+            kakuro-gb.zip
+            build/kakuro.gb
+          retention-days: 90
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: kakuro-gb
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          files="dist/kakuro-gb.zip dist/build/kakuro.gb"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" $files --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" $files --title "Kakuro $GITHUB_REF_NAME" --generate-notes
+          fi

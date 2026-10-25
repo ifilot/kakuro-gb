@@ -1,0 +1,6 @@
+# Build products (ROM, objects, maps, screenshots, battery RAM from make run)
+build/
+
+# Python
+__pycache__/
+*.pyc
