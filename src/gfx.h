@@ -28,25 +28,19 @@
 /* The title screens' frame (the logo and a border round the screen):
  * its tiles from M_LOGO, its map of the whole screen (inside black). */
 #define M_LOGO 3
-#define FRAME_TILE_COUNT 57
-#define M_FREE_TITLE 60
+#define FRAME_TILE_COUNT 48
+#define M_FREE_TITLE 51
 #define LOGO_W 20
 #define LOGO_H 5
 extern const unsigned char frame_tiles[], frame_map[];
-/* The start screen's scene (tools/scene.py): its tiles from M_FREE_TITLE,
- * its map from row SCENE_Y and Color palettes (the logo's is the last,
- * SCENE_PAL_LOGO). */
-#define SCENE_TILE_COUNT 131
-#define SCENE_Y 5
-#define SCENE_H 11
-#define SCENE_PAL_LOGO 7
-extern const unsigned char scene_tiles[], scene_map[], scene_attr[];
-extern const unsigned int scene_colours[32];
-/* The logo with empty cells, and per part (the sum, then the letters)
- * the first tile column and how many, where it is filled in. */
-#define LOGO_PARTS 7
-extern const unsigned char logo_empty[], logo_part_x[], logo_part_w[];
-
+/* The opening artwork has its own tile bank, loaded from tile 0. */
+#define SCENE_TILE_COUNT 175
+#define SCENE_BLANK 52
+#define PRESS_X 4
+#define PRESS_Y 14
+#define PRESS_W 12
+extern const unsigned char scene_tiles[], scene_map[];
+extern const unsigned int scene_colours[4];
 /* Sprite tiles (0x8000). */
 #define S_CORNER 0
 #define S_KEY 1

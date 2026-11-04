@@ -4,6 +4,18 @@ All notable changes to Kakuro for the Game Boy are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [semantic versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-04
+
+### Added
+
+- Cartridge sticker concepts and printable artwork with a solver-checked
+  Kakuro board, plus reproducible label and intro artwork exports.
+
+### Changed
+
+- Replace the opening screen with the four-colour maple, sun and Kakuro
+  artwork, a centered blinking PRESS START, and music starting with the fade-in.
+
 ## [1.0.0] - 2026-10-25
 
 ### Added

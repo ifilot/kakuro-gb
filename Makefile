@@ -23,9 +23,12 @@ HEADERS = $(wildcard src/*.h)
 OBJECTS = $(patsubst src/%.c,build/obj/%.o,$(SOURCES))
 ROM     = build/kakuro.gb
 
-.PHONY: all run puzzles gfx music listen test screenshots docs site serve clean
+.PHONY: all run puzzles gfx music listen test screenshots docs sticker sticker-zen site serve clean
 
 all: $(ROM)
+
+src/gfx.c src/gfx.h &: tools/gen_gfx.py tools/scene.py assets/intro.png
+	$(PYTHON) tools/gen_gfx.py
 
 build/obj/%.o: src/%.c $(HEADERS) Makefile
 	@mkdir -p build/obj
@@ -67,6 +70,14 @@ screenshots: $(ROM)
 
 docs: $(ROM)
 	$(PYTHON) tools/screenshots.py $(ROM) --docs
+
+# Printable cartridge artwork (requires rsvg-convert from librsvg2-bin).
+sticker:
+	$(PYTHON) tools/build_sticker.py
+
+# Illustrated labels with the same solver-checked puzzle in each variation.
+sticker-zen:
+	$(PYTHON) tools/build_zen_stickers.py
 
 # The website, the game in binjgb in the browser -> _site/ (checked);
 # serve: at http://localhost:8000

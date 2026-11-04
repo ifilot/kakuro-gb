@@ -1,0 +1,262 @@
+{
+  "01-maple-canopy": {
+    "width": 160,
+    "height": 144,
+    "used_colors": 4,
+    "palette_rgb": [
+      [
+        247,
+        231,
+        206
+      ],
+      [
+        214,
+        189,
+        132
+      ],
+      [
+        206,
+        82,
+        49
+      ],
+      [
+        24,
+        33,
+        58
+      ]
+    ],
+    "dmg_palette_rgb": [
+      [
+        224,
+        248,
+        208
+      ],
+      [
+        136,
+        192,
+        112
+      ],
+      [
+        52,
+        104,
+        86
+      ],
+      [
+        8,
+        24,
+        32
+      ]
+    ],
+    "unique_8x8_tiles": 175,
+    "fits_256_tile_bank": true,
+    "tile_export_roundtrip_verified": true
+  },
+  "02-offset-sun": {
+    "width": 160,
+    "height": 144,
+    "used_colors": 4,
+    "palette_rgb": [
+      [
+        247,
+        231,
+        206
+      ],
+      [
+        214,
+        189,
+        132
+      ],
+      [
+        206,
+        82,
+        49
+      ],
+      [
+        24,
+        33,
+        58
+      ]
+    ],
+    "dmg_palette_rgb": [
+      [
+        224,
+        248,
+        208
+      ],
+      [
+        136,
+        192,
+        112
+      ],
+      [
+        52,
+        104,
+        86
+      ],
+      [
+        8,
+        24,
+        32
+      ]
+    ],
+    "unique_8x8_tiles": 202,
+    "fits_256_tile_bank": true,
+    "tile_export_roundtrip_verified": true
+  },
+  "03-autumn-frame": {
+    "width": 160,
+    "height": 144,
+    "used_colors": 4,
+    "palette_rgb": [
+      [
+        247,
+        231,
+        206
+      ],
+      [
+        214,
+        189,
+        132
+      ],
+      [
+        206,
+        82,
+        49
+      ],
+      [
+        24,
+        33,
+        58
+      ]
+    ],
+    "dmg_palette_rgb": [
+      [
+        224,
+        248,
+        208
+      ],
+      [
+        136,
+        192,
+        112
+      ],
+      [
+        52,
+        104,
+        86
+      ],
+      [
+        8,
+        24,
+        32
+      ]
+    ],
+    "unique_8x8_tiles": 208,
+    "fits_256_tile_bank": true,
+    "tile_export_roundtrip_verified": true
+  },
+  "04-rising-sun": {
+    "width": 160,
+    "height": 144,
+    "used_colors": 4,
+    "palette_rgb": [
+      [
+        247,
+        231,
+        206
+      ],
+      [
+        214,
+        189,
+        132
+      ],
+      [
+        206,
+        82,
+        49
+      ],
+      [
+        24,
+        33,
+        58
+      ]
+    ],
+    "dmg_palette_rgb": [
+      [
+        224,
+        248,
+        208
+      ],
+      [
+        136,
+        192,
+        112
+      ],
+      [
+        52,
+        104,
+        86
+      ],
+      [
+        8,
+        24,
+        32
+      ]
+    ],
+    "unique_8x8_tiles": 218,
+    "fits_256_tile_bank": true,
+    "tile_export_roundtrip_verified": true
+  },
+  "05-quiet-maple": {
+    "width": 160,
+    "height": 144,
+    "used_colors": 4,
+    "palette_rgb": [
+      [
+        247,
+        231,
+        206
+      ],
+      [
+        214,
+        189,
+        132
+      ],
+      [
+        206,
+        82,
+        49
+      ],
+      [
+        24,
+        33,
+        58
+      ]
+    ],
+    "dmg_palette_rgb": [
+      [
+        224,
+        248,
+        208
+      ],
+      [
+        136,
+        192,
+        112
+      ],
+      [
+        52,
+        104,
+        86
+      ],
+      [
+        8,
+        24,
+        32
+      ]
+    ],
+    "unique_8x8_tiles": 176,
+    "fits_256_tile_bank": true,
+    "tile_export_roundtrip_verified": true
+  }
+}

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Plays the ROM in PyBoy the way a player would and checks the game.
 
-0. The start screen: the logo filled in, the scene under it, START to the
-   title.
+0. The start screen: exact four-colour artwork, centered blinking prompt,
+   music from the fade-in and START to the title, on DMG and Color.
 1. Every puzzle, in order: the puzzle in memory (cells, givens, sums, runs)
    against src/puzzles.c and against the .puz files themselves, the board
    on screen tile by tile, and then the puzzle solved with the D-pad and the
@@ -389,22 +389,62 @@ def gfx_array(name: str) -> list[int]:
 
 
 def splash_test(rom: str) -> None:
-    game = Game(rom)
-    game.settle()
-    game.wait(300)
-    logo = gfx_array("frame_map")[:100]
-    got = [game.reg(BG_MAP + 32 * y + x) for y in range(5) for x in range(20)]
-    check(got == logo, "start screen: the logo not filled in")
-    scene = gfx_array("scene_map")
-    got = [game.reg(BG_MAP + 32 * y + x) for y in range(5, 5 + len(scene) // 20) for x in range(20)]
-    check(got == scene, "start screen: the scene not there")
-    game.to_screen("start")
-    check(on_title(game), "start screen: START did not lead to the title's cards")
-    current = game.byte("current")
-    game.press("left", after=4)                  # 6x6 *, no puzzles yet
-    game.press("a", after=30)
-    check(on_title(game) and game.byte("current") == current, "title: a group without puzzles opened")
-    game.stop()
+    import gen_gfx
+    artwork = gen_gfx.scene.draw()
+    prompt_y = GFX["PRESS_Y"] * 8
+    # Construct the expected screen from the selected asset and font glyphs.
+    with_prompt = [row[:] for row in artwork]
+    label = "PRESS START"
+    x0 = GFX["PRESS_X"] * 8 + (GFX["PRESS_W"] * 8 - (len(label)*8-3)) // 2
+    ink = []
+    for k, ch in enumerate(label):
+        for y, row in enumerate(gen_gfx.FONT[ch]):
+            for x, pixel in enumerate(row):
+                if pixel == "#":
+                    xx, yy = x0 + k*8 + x + 1, prompt_y + y
+                    with_prompt[yy][xx] = 3
+                    ink.append((xx, yy))
+    check(abs((min(x for x, _ in ink) + max(x for x, _ in ink))/2 - 79.5) <= .5,
+          "start screen: prompt not centered")
+    for cgb in (False, True):
+        game = Game(rom, cgb=cgb, sound=True)
+        game.settle()
+        mode = "Color" if cgb else "DMG"
+        palette = [tuple((c >> shift) & 255 for shift in (16, 8, 0)) for c in SHADES]
+        if cgb:
+            palette = [tuple(((c >> shift) & 255) >> 3 << 3 for shift in (16, 8, 0))
+                       for c in gen_gfx.scene.COLOURS]
+            check(all(game.pb.memory[1, BG_MAP + y*32+x] == 0
+                      for y in range(18) for x in range(20)),
+                  "start screen: Color uses more than one palette")
+        check(game.reg(0xFF26) & 6 == 6, f"{mode}: music not playing at intro fade-in")
+        check(not game.reg(0xFF26) & 9, f"{mode}: unwanted intro sound effects")
+        seen, audible = set(), False
+        for _ in range(65):
+            on = game.reg(BG_MAP + GFX["PRESS_Y"]*32 + GFX["PRESS_X"]) != GFX["SCENE_BLANK"]
+            if on not in seen:
+                game.wait(1)               # render the map changed during VBlank
+                image = game.screen_rgb()
+                want = with_prompt if on else artwork
+                check(list(image.getdata()) == [palette[p] for row in want for p in row],
+                      f"{mode}: intro pixels differ from selected art / prompt ({on=})")
+                check(len(image.getcolors()) == 4, f"{mode}: intro is not four colours")
+                seen.add(on)
+            audible |= bool(game.pb.sound.ndarray.any())
+            game.wait(1)
+        check(seen == {False, True}, f"{mode}: prompt did not blink")
+        check(audible, f"{mode}: intro audio samples are silent")
+        game.press("a", after=4)
+        check(not on_title(game), f"{mode}: A skipped the PRESS START screen")
+        game.to_screen("start")
+        check(on_title(game), f"{mode}: START did not lead to the title's cards")
+        check(game.reg(0xFF26) & 6, f"{mode}: music stopped after START")
+        current = game.byte("current")
+        game.press("left", after=4)         # 6x6 *, no puzzles yet
+        game.press("a", after=30)
+        check(on_title(game) and game.byte("current") == current,
+              f"{mode}: a group without puzzles opened")
+        game.stop()
 
 
 def full_run(rom: str, model: list[dict]) -> None:

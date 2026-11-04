@@ -309,34 +309,16 @@ def tiny_font():
 
 # --- the start screen's scene ----------------------------------------------------
 
-def scene_tiles(base):
-    """The scene as tiles (from base on), its map, and per tile the Color
-    palette (scene.PALETTES) that has all its materials. The border runs
-    down its sides (scene.EDGE: the border's material, the outside's), with
-    a dot of the outside inside it."""
-    img = scene.draw()
-    line, outside = scene.EDGE
-    border = border_image()
-    for y in range(scene.H):
-        for x in range(scene.W):
-            if border[scene.TOP + y][x] == W:
-                img[y][x] = line
-            elif x < 2 or x > 157 or x in (3, 156):     # a dark gap inside the line, for a light scene
-                img[y][x] = outside
-    tiles, tmap, attrs = [], [], []
-    for ty in range(scene.H // 8):
-        for tx in range(scene.W // 8):
-            mats = [[img[y][x] for x in range(tx * 8, tx * 8 + 8)] for y in range(ty * 8, ty * 8 + 8)]
-            used = {m for row in mats for m in row}
-            fits = [p for p, pal in enumerate(scene.PALETTES)
-                    if all(pal[scene.MATERIALS[m][0]] == m for m in used)]
-            assert fits, f"scene tile ({tx}, {ty}) has {sorted(used)}: no palette has them all"
-            t = [[scene.MATERIALS[m][0] for m in row] for row in mats]
-            if t not in tiles:
-                tiles.append(t)
-            tmap.append(base + tiles.index(t))
-            attrs.append(fits[0])
-    return tiles, tmap, attrs
+def scene_tiles():
+    """The full opening illustration in its own background tile bank."""
+    tiles, tmap = [], []
+    for tile in tiles_of(scene.draw()):
+        if tile not in tiles:
+            tiles.append(tile)
+        tmap.append(tiles.index(tile))
+    blank = tiles.index([[W] * 8 for _ in range(8)])
+    assert len(tiles) + scene.PRESS_W <= 256
+    return tiles, tmap, blank
 
 
 def rgb555(c):
@@ -345,14 +327,8 @@ def rgb555(c):
 
 
 def scene_colours():
-    """The start screen's 8 Color palettes: the scene's (the rest its first
-    again), then the logo's
-    (the sums' colours, as video.c's CPAL_CLUE) for the logo and the line."""
-    out = []
-    for pal in scene.PALETTES + [scene.PALETTES[0]] * (7 - len(scene.PALETTES)):
-        out += [rgb555(scene.MATERIALS[m][1]) for m in pal]
-    out += [rgb555(c) for c in (0xF8F0DC, 0xF0B070, 0xD8643C, 0x1E2440)]
-    return out
+    """The illustration's single four-colour palette, light to dark."""
+    return [rgb555(c) for c in scene.COLOURS]
 
 
 # --- menus ------------------------------------------------------------------
@@ -473,13 +449,6 @@ def framed(image, top):
     return [[W if border[top + y][x] == W else c for x, c in enumerate(row)] for y, row in enumerate(image)]
 
 
-def logo_columns(part):
-    """The tile columns where the logo with only `part` filled in differs
-    from the empty one."""
-    empty = tiles_of(logo_image(()))
-    alone = tiles_of(logo_image((part,)))
-    return sorted({k % 20 for k, (a, b) in enumerate(zip(empty, alone)) if a != b})
-
 
 # --- sprites --------------------------------------------------------------
 
@@ -554,30 +523,18 @@ def main() -> int:
     menu_tiles = [bt["black"]] + preview_tiles()    # from 0 on every menu screen
     logo_base = len(menu_tiles)                      # the logo after them, on the title
 
-    # The title screens' frame: the logo and the border, the whole screen;
-    # and the logo empty (for the start screen, which fills it in a part at
-    # a time: per part its tile columns from the whole one).
+    # The menu logo and border remain separate from the opening artwork.
     logo = logo_image()
     whole = framed(logo + [row[:] for row in border_image()[LOGO_ROWS * 8:]], 0)
-    empty = framed(logo_image(()), 0)
-    frame_tiles, maps = [], []
-    for image in (whole, empty):
-        maps.append([])
-        for t in tiles_of(image):
-            if t == bt["black"]:
-                maps[-1].append(0)
-                continue
-            if t not in frame_tiles:
-                frame_tiles.append(t)
-            maps[-1].append(logo_base + frame_tiles.index(t))
-    frame_map, logo_empty = maps
-    part_columns = [logo_columns(p) for p in range(LOGO_PARTS)]
-    scene_base = logo_base + len(frame_tiles)      # on the start screen
-    s_tiles, s_map, s_attrs = scene_tiles(scene_base)
-    assert scene_base + len(s_tiles) + 12 <= 256    # and the 12 of PRESS START
-    for p, cols in enumerate(part_columns):
-        assert cols == list(range(cols[0], cols[-1] + 1)), (p, cols)
-        assert not any(set(cols) & set(c) for c in part_columns[p + 1:]), p
+    frame_tiles, frame_map = [], []
+    for tile in tiles_of(whole):
+        if tile == bt["black"]:
+            frame_map.append(0)
+            continue
+        if tile not in frame_tiles:
+            frame_tiles.append(tile)
+        frame_map.append(logo_base + frame_tiles.index(tile))
+    s_tiles, s_map, s_blank = scene_tiles()
 
     sprites = sprite_tiles()
     delay, ease = wave_tables()
@@ -603,19 +560,14 @@ def main() -> int:
           f"#define M_FREE_TITLE {logo_base + len(frame_tiles)}",
           f"#define LOGO_W 20", f"#define LOGO_H {LOGO_ROWS}",
           "extern const unsigned char frame_tiles[], frame_map[];",
-          "/* The start screen's scene (tools/scene.py): its tiles from M_FREE_TITLE,",
-          " * its map from row SCENE_Y and Color palettes (the logo's is the last,",
-          " * SCENE_PAL_LOGO). */",
+          "/* The opening artwork has its own tile bank, loaded from tile 0. */",
           f"#define SCENE_TILE_COUNT {len(s_tiles)}",
-          f"#define SCENE_Y {scene.TOP // 8}",
-          f"#define SCENE_H {scene.H // 8}",
-          "#define SCENE_PAL_LOGO 7",
-          "extern const unsigned char scene_tiles[], scene_map[], scene_attr[];",
-          "extern const unsigned int scene_colours[32];",
-          "/* The logo with empty cells, and per part (the sum, then the letters)",
-          " * the first tile column and how many, where it is filled in. */",
-          f"#define LOGO_PARTS {LOGO_PARTS}",
-          "extern const unsigned char logo_empty[], logo_part_x[], logo_part_w[];", "",
+          f"#define SCENE_BLANK {s_blank}",
+          f"#define PRESS_X {scene.PRESS_X}",
+          f"#define PRESS_Y {scene.PRESS_Y}",
+          f"#define PRESS_W {scene.PRESS_W}",
+          "extern const unsigned char scene_tiles[], scene_map[];",
+          "extern const unsigned int scene_colours[4];",
           "/* Sprite tiles (0x8000). */",
           "#define S_CORNER 0", "#define S_KEY 1",
           "#define S_EDGE 11                  /* down, across, both, dot */",
@@ -643,14 +595,10 @@ def main() -> int:
          c_array("cgb_cell_tiles", b"".join(encode(t) for t in bt["cgb_cells"])),
          c_array("chip_tiles", b"".join(encode(t) for t in chip_tiles())),
          c_array("frame_map", bytes(frame_map), 20),
-         c_array("logo_empty", bytes(logo_empty), 20),
          c_array("scene_tiles", b"".join(encode(t) for t in s_tiles)),
          c_array("scene_map", bytes(s_map), 20),
-         c_array("scene_attr", bytes(s_attrs), 20),
-         "const unsigned int scene_colours[32] = {\n    "
+         "const unsigned int scene_colours[4] = {\n    "
          + ", ".join(f"0x{c:04X}" for c in scene_colours()) + "\n};\n",
-         c_array("logo_part_x", bytes(c[0] for c in part_columns)),
-         c_array("logo_part_w", bytes(len(c) for c in part_columns)),
          c_array("tiny_font", tiny_font(), 6),
          c_array("wave_delay", delay),
          c_array("wave_ease", ease)]

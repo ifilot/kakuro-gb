@@ -1,0 +1,178 @@
+{
+  "source": "assets/puzzles/001.puz",
+  "size": 6,
+  "row_col_indexing": "zero based",
+  "clue_convention": "upper-right = across; lower-left = down",
+  "solution": [
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      2,
+      6,
+      1,
+      9,
+      0
+    ],
+    [
+      0,
+      7,
+      9,
+      4,
+      8,
+      0
+    ],
+    [
+      0,
+      1,
+      5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      8,
+      6,
+      2,
+      9
+    ],
+    [
+      0,
+      0,
+      0,
+      9,
+      4,
+      7
+    ]
+  ],
+  "displayed": [
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      2,
+      null,
+      1,
+      9,
+      null
+    ],
+    [
+      null,
+      null,
+      9,
+      4,
+      null,
+      null
+    ],
+    [
+      null,
+      1,
+      5,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      6,
+      2,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      9,
+      null,
+      7
+    ]
+  ],
+  "clues": [
+    {
+      "row": 0,
+      "col": 1,
+      "down": 10
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "down": 28
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "down": 5
+    },
+    {
+      "row": 0,
+      "col": 4,
+      "down": 17
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "across": 18
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "across": 28
+    },
+    {
+      "row": 3,
+      "col": 0,
+      "across": 6
+    },
+    {
+      "row": 3,
+      "col": 3,
+      "down": 15
+    },
+    {
+      "row": 3,
+      "col": 4,
+      "down": 6
+    },
+    {
+      "row": 3,
+      "col": 5,
+      "down": 16
+    },
+    {
+      "row": 4,
+      "col": 1,
+      "across": 25
+    },
+    {
+      "row": 5,
+      "col": 2,
+      "across": 20
+    }
+  ],
+  "solutions_found_with_limit_2": 1,
+  "all_runs_have_distinct_digits": true,
+  "all_clue_sums_match_solution": true,
+  "final_board_pixel_sha256": {
+    "06-autumn-garden": "2ac3a10f21f9f3655e3a7e5509fa7d580c0bd081e5e846c8b67faccf59b28ee6",
+    "07-pavilion-garden": "2ac3a10f21f9f3655e3a7e5509fa7d580c0bd081e5e846c8b67faccf59b28ee6",
+    "08-maple-and-stone": "2ac3a10f21f9f3655e3a7e5509fa7d580c0bd081e5e846c8b67faccf59b28ee6",
+    "09-evening-garden": "2ac3a10f21f9f3655e3a7e5509fa7d580c0bd081e5e846c8b67faccf59b28ee6",
+    "10-open-zen-garden": "2ac3a10f21f9f3655e3a7e5509fa7d580c0bd081e5e846c8b67faccf59b28ee6"
+  }
+}

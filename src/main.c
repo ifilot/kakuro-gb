@@ -24,7 +24,7 @@ void main(void)
     set_sprite_data(0, SPRITE_TILE_COUNT, sprite_tiles);
     sound_init();
     best_init();
-    music_enable(1);
+    music_enable(0);                       /* the intro starts it with its fade-in */
     clock_init();
     current = 0;
 

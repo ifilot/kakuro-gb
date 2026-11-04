@@ -1,6 +1,6 @@
 # Kakuro for the Game Boy
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](CHANGELOG.md)
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 [![Language: C](https://img.shields.io/badge/language-C-A8B9CC.svg?logo=c&logoColor=white)](src)
 
@@ -14,7 +14,7 @@ Game Boy is switched off, and a puzzle left unsolved is not kept at all.
 Boy Color.
 
 <p align="center">
-  <img src="docs/start.png" alt="The start screen: a zen garden" width="24%">
+  <img src="docs/start.png" alt="The start screen: Kakuro, a sun and maple leaves" width="24%">
   <img src="docs/title.png" alt="Title screen: the groups of puzzles" width="24%">
   <img src="docs/grid.png" alt="Choosing a puzzle" width="24%">
   <img src="docs/playing.png" alt="An 8x8 puzzle in progress" width="24%">
@@ -33,6 +33,9 @@ Boy Color.
 </p>
 
 ## Play
+
+The opening screen shows the maple artwork with a blinking PRESS START.
+Music begins with its fade-in; press START to choose a puzzle group.
 
 Load `build/kakuro.gb` in an emulator (mGBA, SameBoy, BGB, ...) or on a
 flash cartridge. It plays in colour on the Game Boy Color and in shades on
@@ -108,6 +111,8 @@ make test PYTHON=~/.venvs/pyboy/bin/python
 | `make test` | Every puzzle solved in the emulator, see below |
 | `make screenshots` | Every screen -> `build/screens/` |
 | `make docs` | The pictures above, in Game Boy green -> `docs/` |
+| `make sticker` | Printable cartridge label -> `assets/cartridge/` (requires `rsvg-convert`) |
+| `make sticker-zen` | Five illustrated labels with a verified puzzle -> `assets/cartridge/zen-v2/` |
 | `make puzzles` | Regenerate `src/puzzles.[ch]` from `assets/puzzles` |
 | `make gfx` | Regenerate `src/gfx.[ch]`; tile sheet in `build/gfx_preview.png` |
 | `make music` | Regenerate `src/music.[ch]` from the notes in `tools/gen_music.py` |

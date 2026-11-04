@@ -39,14 +39,14 @@ def move_model(n: int, white: list[bool], cur: int, direction: str) -> int | Non
 
 
 class Game:
-    def __init__(self, rom: str | Path, palette=SHADES, cgb: bool = False):
+    def __init__(self, rom: str | Path, palette=SHADES, cgb: bool = False, sound: bool = False):
         """cgb: run it on a Game Boy Color (else on the original, in shades)."""
         rom = Path(rom)
         self.symbols = {}
         noi = rom.with_suffix(".noi")
         for m in re.finditer(r"^DEF (\w+) 0x([0-9A-F]+)", noi.read_text(), re.M):
             self.symbols[m.group(1)] = int(m.group(2), 16)
-        self.pb = PyBoy(str(rom), window="null", sound_emulated=False, color_palette=palette, cgb=cgb)
+        self.pb = PyBoy(str(rom), window="null", sound_emulated=sound, color_palette=palette, cgb=cgb)
         self.pb.set_emulation_speed(0)
 
     # --- time and buttons ---------------------------------------------------

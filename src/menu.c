@@ -92,63 +92,42 @@ static char *put_solved(char *p, uint8_t count, uint8_t total)
 
 /* --- the start screen ----------------------------------------------------- */
 
-/* At power-on, in the title screens' frame (the logo and the border): a
- * scene (tools/scene.py), a zen garden seen from above. The logo is filled
- * in a part at a time (the letters, then the sum), then PRESS START blinks
- * under the scene. On the Color the screen
- * has palettes of its own. */
-#define T_SCENE     M_FREE_TITLE
-#define T_PRESS     (T_SCENE + SCENE_TILE_COUNT)    /* 12 tiles */
-#define PRESS_X     4                       /* the line's map column, row 16 */
-#define PART_FRAMES 10                      /* between the logo's parts */
+/* The full-screen maple artwork uses its own tile bank and one palette.
+ * The music begins as the prepared screen fades in. */
+#define T_PRESS     SCENE_TILE_COUNT
 
 static void press_line(uint8_t on)
 {
-    uint8_t row[12], k;
-    for (k = 0; k < 12; k++)
-        row[k] = on ? (uint8_t)(T_PRESS + k) : M_BLACK;
-    set_bkg_tiles(PRESS_X, 16, 12, 1, row);
+    uint8_t row[PRESS_W], k;
+    for (k = 0; k < PRESS_W; k++)
+        row[k] = on ? (uint8_t)(T_PRESS + k) : SCENE_BLANK;
+    set_bkg_tiles(PRESS_X, PRESS_Y, PRESS_W, 1, row);
 }
 
 uint8_t splash_screen(void)
 {
-    uint8_t part = 0, wait = PART_FRAMES, r, p, t = 0;
+    uint8_t t = 0;
 
     menu_begin();
-    video_palettes(scene_colours, 8);
-    vram_tiles(M_LOGO, FRAME_TILE_COUNT, frame_tiles);
-    set_bkg_tiles(0, 0, 20, 18, frame_map);
-    set_bkg_tiles(0, 0, LOGO_W, LOGO_H, logo_empty);
-    attr_bkg(0, 0, 20, 18, SCENE_PAL_LOGO);
-    vram_tiles(T_SCENE, SCENE_TILE_COUNT, scene_tiles);
-    set_bkg_tiles(0, SCENE_Y, 20, SCENE_H, scene_map);
-    attr_tiles(0, SCENE_Y, 20, SCENE_H, scene_attr);
-    canvas_begin(12, 1, C_BLACK);
-    canvas_text((96 - 11 * 8) / 2, 0, "PRESS START", C_WHITE);
-    canvas_show((uint8_t)T_PRESS, PRESS_X, 16);
-    press_line(0);
+    video_palettes(scene_colours, 1);
+    vram_tiles(0, SCENE_TILE_COUNT, scene_tiles);
+    set_bkg_tiles(0, 0, 20, 18, scene_map);
+    attr_bkg(0, 0, 20, 18, 0);
+    canvas_begin(PRESS_W, 1, C_WHITE);
+    canvas_text((PRESS_W * 8 - (11 * 8 - 3)) / 2, 0, "PRESS START", C_BLACK);
+    canvas_show((uint8_t)T_PRESS, PRESS_X, PRESS_Y);
+    music_enable(1);
     menu_end();
 
     for (;;) {
         menu_frame();
         t++;
-        if (pressed & (J_START | J_A)) {
+        if (pressed & J_START) {
             sfx(SFX_SELECT);
             return SCREEN_TITLE;
         }
-        if (part < LOGO_PARTS) {            /* the letters K-A-K-U-R-O, then the 26 */
-            if (--wait)
-                continue;
-            p = part + 1 < LOGO_PARTS ? part + 1 : 0;
-            for (r = 0; r < LOGO_H; r++)
-                set_bkg_tiles(logo_part_x[p], r, logo_part_w[p], 1, frame_map + r * 20 + logo_part_x[p]);
-            sfx(p ? SFX_PLACE : SFX_SELECT);
-            wait = PART_FRAMES;
-            part++;
-            continue;
-        }
         if (!(t & 0x1F))
-            press_line(t & 0x20);
+            press_line(!(t & 0x20));
     }
 }
 

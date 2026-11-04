@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from PIL import Image
+import gen_gfx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gbharness import GREEN, SHADES, Game  # noqa: E402
@@ -50,8 +51,8 @@ def main() -> int:
     rom = args[0] if args else str(ROOT / "build/kakuro.gb")
     game = Game(rom, palette=PALETTE)
     game.settle()
-    game.wait(200)                          # the logo filled in
-    while not game.reg(0x9800 + 32 * 16 + 5):   # PRESS START on (not the black tile)
+    _, _, blank = gen_gfx.scene_tiles()
+    while game.reg(0x9800 + 32 * gen_gfx.scene.PRESS_Y + gen_gfx.scene.PRESS_X) == blank:
         game.wait(1)
     save(game, "start")
     game.to_screen("start")
