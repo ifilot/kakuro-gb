@@ -33,13 +33,15 @@
 #define LOGO_W 20
 #define LOGO_H 5
 extern const unsigned char frame_tiles[], frame_map[];
-/* The opening artwork has its own tile bank, loaded from tile 0. */
+/* Opening-only ZX0 streams expand into VRAM with the display off:
+ * tiles at 0x8800 (indices 128..255, then 0..), map at 0x9800. */
 #define SCENE_TILE_COUNT 175
-#define SCENE_BLANK 52
+#define SCENE_BLANK 180
+#define SCENE_PRESS_FIRST 47
 #define PRESS_X 4
 #define PRESS_Y 14
 #define PRESS_W 12
-extern const unsigned char scene_tiles[], scene_map[];
+extern const unsigned char scene_tiles_zx0[], scene_map_zx0[];
 extern const unsigned int scene_colours[4];
 /* Sprite tiles (0x8000). */
 #define S_CORNER 0

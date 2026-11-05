@@ -16,16 +16,20 @@ Colours are the Game Boy's four shades: 0 white, 1 light grey, 2 dark grey,
   below it the sum down (left-aligned in the bottom-left tile, where that
   triangle is widest). A triangle without a sum stays black.
 
-The tiles are loaded from index 0 with BG tile data at 0x8800 (signed
-addressing is handled in video.c); sprite tiles live at 0x8000-0x87FF, so
-they never share space with the background.
+Game tiles are loaded from index 0 (signed addressing is handled in
+video.c). The opening artwork starts at index 128 for contiguous ZX0
+output at 0x8800. Sprite tiles live at 0x8000-0x87FF, separately.
 
   python3 tools/gen_gfx.py [--preview]   (preview: build/gfx_preview.png)
 """
 from __future__ import annotations
 
+import argparse
 import math
+import os
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import scene
@@ -310,15 +314,27 @@ def tiny_font():
 # --- the start screen's scene ----------------------------------------------------
 
 def scene_tiles():
-    """The full opening illustration in its own background tile bank."""
+    """Opening tiles in physical VRAM order, starting at 0x8800 (tile 128)."""
     tiles, tmap = [], []
     for tile in tiles_of(scene.draw()):
         if tile not in tiles:
             tiles.append(tile)
-        tmap.append(tiles.index(tile))
-    blank = tiles.index([[W] * 8 for _ in range(8)])
+        tmap.append((tiles.index(tile) + 128) & 255)
+    blank = (tiles.index([[W] * 8 for _ in range(8)]) + 128) & 255
     assert len(tiles) + scene.PRESS_W <= 256
     return tiles, tmap, blank
+
+
+def compress_scene(data, compressor):
+    """ZX0 with a build-time round trip, before emitting the ROM array."""
+    with tempfile.TemporaryDirectory(prefix="kakuro-intro-") as directory:
+        raw, packed, restored = [Path(directory) / name for name in ("raw", "packed", "restored")]
+        raw.write_bytes(data)
+        subprocess.run([str(compressor), "--alg=zx0", str(raw), str(packed)], check=True)
+        subprocess.run([str(compressor), "--alg=zx0", "-d", str(packed), str(restored)], check=True)
+        if restored.read_bytes() != data:
+            raise ValueError("Opening artwork failed the ZX0 round trip")
+        return packed.read_bytes()
 
 
 def rgb555(c):
@@ -495,6 +511,11 @@ def c_array(name, data, per_line=16):
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--preview", action="store_true")
+    parser.add_argument("--gbcompress", type=Path,
+                        default=Path(os.environ.get("GBDK_HOME", Path.home() / "gbdk")) / "bin/gbcompress")
+    args = parser.parse_args()
     font = font_tiles()
     bt = board_tiles()
 
@@ -535,6 +556,11 @@ def main() -> int:
             frame_tiles.append(tile)
         frame_map.append(logo_base + frame_tiles.index(tile))
     s_tiles, s_map, s_blank = scene_tiles()
+    s_data = compress_scene(b"".join(encode(t) for t in s_tiles), args.gbcompress)
+    # Match the hardware's 32-column stride, so the map also expands directly
+    # into VRAM without a temporary buffer or row-by-row copying.
+    s_vram_map = b"".join(bytes(s_map[y*20:(y+1)*20] + [s_blank]*12) for y in range(18))
+    s_map_data = compress_scene(s_vram_map, args.gbcompress)
 
     sprites = sprite_tiles()
     delay, ease = wave_tables()
@@ -560,13 +586,15 @@ def main() -> int:
           f"#define M_FREE_TITLE {logo_base + len(frame_tiles)}",
           f"#define LOGO_W 20", f"#define LOGO_H {LOGO_ROWS}",
           "extern const unsigned char frame_tiles[], frame_map[];",
-          "/* The opening artwork has its own tile bank, loaded from tile 0. */",
+          "/* Opening-only ZX0 streams expand into VRAM with the display off:",
+          " * tiles at 0x8800 (indices 128..255, then 0..), map at 0x9800. */",
           f"#define SCENE_TILE_COUNT {len(s_tiles)}",
           f"#define SCENE_BLANK {s_blank}",
+          f"#define SCENE_PRESS_FIRST {(128 + len(s_tiles)) & 255}",
           f"#define PRESS_X {scene.PRESS_X}",
           f"#define PRESS_Y {scene.PRESS_Y}",
           f"#define PRESS_W {scene.PRESS_W}",
-          "extern const unsigned char scene_tiles[], scene_map[];",
+          "extern const unsigned char scene_tiles_zx0[], scene_map_zx0[];",
           "extern const unsigned int scene_colours[4];",
           "/* Sprite tiles (0x8000). */",
           "#define S_CORNER 0", "#define S_KEY 1",
@@ -595,8 +623,8 @@ def main() -> int:
          c_array("cgb_cell_tiles", b"".join(encode(t) for t in bt["cgb_cells"])),
          c_array("chip_tiles", b"".join(encode(t) for t in chip_tiles())),
          c_array("frame_map", bytes(frame_map), 20),
-         c_array("scene_tiles", b"".join(encode(t) for t in s_tiles)),
-         c_array("scene_map", bytes(s_map), 20),
+         c_array("scene_tiles_zx0", s_data),
+         c_array("scene_map_zx0", s_map_data),
          "const unsigned int scene_colours[4] = {\n    "
          + ", ".join(f"0x{c:04X}" for c in scene_colours()) + "\n};\n",
          c_array("tiny_font", tiny_font(), 6),
@@ -607,8 +635,10 @@ def main() -> int:
     print(f"wrote src/gfx.h and .c: {game_count} game tiles, {len(menu_tiles)} menu, "
           f"{len(frame_tiles)} frame and {len(s_tiles)} scene tiles, "
           f"{len(sprites)} sprite tiles")
+    print(f"opening ZX0: {len(s_tiles)*16} -> {len(s_data)} tile bytes; "
+          f"{len(s_vram_map)} -> {len(s_map_data)} map bytes (32-column VRAM stride)")
 
-    if "--preview" in sys.argv:
+    if args.preview:
         preview(order, logo)
     return 0
 

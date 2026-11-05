@@ -95,6 +95,11 @@ curl -sL https://github.com/gbdk-2020/gbdk-2020/releases/download/4.5.0/gbdk-lin
 make                  # -> build/kakuro.gb, and the ROM space used
 ```
 
+The opening artwork alone uses ZX0 compression. `make gfx` uses the
+`gbcompress` tool bundled with GBDK and verifies both compressed streams
+by decompressing them again. The game expands the tiles and map directly
+into video memory while the display is off, without an image buffer in RAM.
+
 `make run` plays it in [mGBA](https://mgba.io) (`sudo apt install mgba-qt`;
 `MGBA=` names another binary). The tests and screenshots use
 [PyBoy](https://github.com/Baekalfen/PyBoy):

@@ -4,6 +4,14 @@ All notable changes to Kakuro for the Game Boy are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Compress only the opening artwork and map with ZX0, saving 1,269 ROM
+  bytes including the decoder. Expand directly into video memory before
+  the fade-in, preserving the artwork, prompt and music timing.
+
 ## [1.1.0] - 2026-11-04
 
 ### Added

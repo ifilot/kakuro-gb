@@ -28,7 +28,7 @@ ROM     = build/kakuro.gb
 all: $(ROM)
 
 src/gfx.c src/gfx.h &: tools/gen_gfx.py tools/scene.py assets/intro.png
-	$(PYTHON) tools/gen_gfx.py
+	$(PYTHON) tools/gen_gfx.py --gbcompress "$(GBDK_HOME)/bin/gbcompress"
 
 build/obj/%.o: src/%.c $(HEADERS) Makefile
 	@mkdir -p build/obj
@@ -49,7 +49,7 @@ puzzles:
 
 # Regenerate src/gfx.[ch]; the tile sheet goes to build/gfx_preview.png.
 gfx:
-	$(PYTHON) tools/gen_gfx.py --preview
+	$(PYTHON) tools/gen_gfx.py --preview --gbcompress "$(GBDK_HOME)/bin/gbcompress"
 
 # Regenerate src/music.[ch] from the notes in tools/gen_music.py.
 music:

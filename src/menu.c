@@ -7,6 +7,7 @@
  * (that takes frames); the choice has the board's cursor, sprites 0-3, that
  * steps a dot inwards every half second. */
 #include <gb/gb.h>
+#include <gbdk/zx0decompress.h>
 #include "menu.h"
 #include "main.h"
 #include "canvas.h"
@@ -94,7 +95,7 @@ static char *put_solved(char *p, uint8_t count, uint8_t total)
 
 /* The full-screen maple artwork uses its own tile bank and one palette.
  * The music begins as the prepared screen fades in. */
-#define T_PRESS     SCENE_TILE_COUNT
+#define T_PRESS     SCENE_PRESS_FIRST
 
 static void press_line(uint8_t on)
 {
@@ -110,8 +111,10 @@ uint8_t splash_screen(void)
 
     menu_begin();
     video_palettes(scene_colours, 1);
-    vram_tiles(0, SCENE_TILE_COUNT, scene_tiles);
-    set_bkg_tiles(0, 0, 20, 18, scene_map);
+    /* menu_begin() leaves the LCD off and VRAM bank 0 selected. Both
+     * streams expand straight into VRAM; no artwork buffer is needed. */
+    zx0_decompress((void *)scene_tiles_zx0, (void *)0x8800);
+    zx0_decompress((void *)scene_map_zx0, (void *)0x9800);
     attr_bkg(0, 0, 20, 18, 0);
     canvas_begin(PRESS_W, 1, C_WHITE);
     canvas_text((PRESS_W * 8 - (11 * 8 - 3)) / 2, 0, "PRESS START", C_BLACK);
