@@ -59,8 +59,9 @@ The status line shows the cursor's runs (`→20/4`, `↓16/2`) and the clock.
 When stuck, SELECT lists every combination that makes each sum, plus the
 digits the cell can still take.
 
-On the title screen choose a size and difficulty, then a puzzle; solved
-ones get a check mark. Nothing is saved: a puzzle is played in one go
+On the title screen choose a size (a row) and difficulty (a column), then
+a puzzle; solved ones get a check mark. A group shows 20 puzzles a page:
+move past the left or right edge for the page before or after. Nothing is saved: a puzzle is played in one go
 (quitting loses it, so the game asks first), and best times last until the
 Game Boy is switched off.
 
@@ -72,13 +73,15 @@ same set of digits; with the standard rules alone, 26 of them have more
 than one solution. `tools/gen_puzzles.py` adds givens from the stored
 solution (1 to 3 per puzzle) until each has exactly one.
 
-| Puzzles | Grid (with the sums) | Difficulty |
+| Grid (with the sums) | Difficulty | Puzzles |
 | --- | --- | --- |
-| 1-10 | 6 x 6 | ★★ |
-| 11-30 | 7 x 7 | ★★ |
-| 31-40 | 7 x 7 | ★★★ |
-| 41-60 | 8 x 8 | ★★ |
-| 61-80 | 8 x 8 | ★★★ |
+| 6 x 6 | ★★ | 10 |
+| 7 x 7 | ★★ | 20 |
+| 7 x 7 | ★★★ | 10 |
+| 8 x 8 | ★★ | 20 |
+| 8 x 8 | ★★★ | 20 |
+
+Puzzles are numbered within their group, from 1.
 
 A cell is 16x16 dots, so an 8x8 grid (128 dots) fits the 160x136 dots above
 the status line whole. kakuro-8bit's 9x9 and 10x10 puzzles would not, and

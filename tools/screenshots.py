@@ -58,7 +58,6 @@ def main() -> int:
     game.to_screen("start")
     save(game, "title")
     game.presses("down", 2)                 # 8x8 **: the cards' last row, first column
-    game.press("left")
     game.to_screen("a")
     game.wait(20)
     save(game, "grid")
@@ -100,7 +99,6 @@ def main() -> int:
     game = Game(rom, cgb=True)              # on a Game Boy Color: an 8x8 puzzle
     game.boot()
     game.presses("down", 2)
-    game.press("left")
     game.to_screen("a")
     game.wait(20)
     save(game, "color_grid")

@@ -11,6 +11,12 @@ and the project uses [semantic versioning](https://semver.org/).
 - Compress only the opening artwork and map with ZX0, saving 1,269 ROM
   bytes including the decoder. Expand directly into video memory before
   the fade-in, preserving the artwork, prompt and music timing.
+- Lay out the title's cards as a table: a size a row, a difficulty a
+  column, and 6x6 (only two stars) as one card across its row. The unused
+  one-star 6x6 card is gone.
+- Show a group's puzzles 20 to a page, with a dot a page under the cells;
+  past the left or right edge is the page before or after. Number puzzles
+  within their group, on the grid, the pause panel and the overview.
 
 ## [1.1.0] - 2026-11-04
 

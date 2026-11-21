@@ -359,7 +359,7 @@ void panel_info_draw(void)
 
     canvas_begin(20, 2, C_WHITE);           /* the puzzle */
     p = put_str(text, "PUZZLE ");
-    *put_num(p, info_puzzle + 1, 0) = 0;
+    *put_num(p, puzzle_number(info_puzzle), 0) = 0;
     x = canvas_text(8, 2, text, C_BLACK);
     *put_size(text, n) = 0;
     x = canvas_tiny(x + 4, 3, text, C_DARK);
@@ -497,7 +497,7 @@ void panel_overview(uint8_t k, uint16_t seconds, uint16_t best, uint8_t record)
     canvas_text(36, 1, "]", C_DARK);
     canvas_text(52, 1, "SOLVED!", C_BLACK);
     p = put_str(text, "PUZZLE ");
-    p = put_num(p, k + 1, 0);
+    p = put_num(p, puzzle_number(k), 0);
     p = put_str(p, "  ");
     *put_size(p, n) = 0;
     w = canvas_tiny_width(text);
@@ -557,8 +557,6 @@ void panel_overview_counts(void)
     uint8_t g, y = 8, t = T_OVER_LINES;
     count_line(t, y++, NO_RUN, best_solved(0, PUZZLE_COUNT), PUZZLE_COUNT);
     for (g = 0; g < GROUP_COUNT; g++) {
-        if (!group_count[g])                /* none yet */
-            continue;
         t += 18;
         count_line(t, ++y, g, best_solved(group_first[g], group_count[g]), group_count[g]);
     }

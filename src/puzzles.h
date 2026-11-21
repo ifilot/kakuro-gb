@@ -3,7 +3,7 @@
 #define PUZZLES_H
 
 #define PUZZLE_COUNT 80
-#define GROUP_COUNT 6
+#define GROUP_COUNT 5
 
 /* Groups of one size and difficulty: grid size (with the sum row and
  * column), stars, first puzzle, count. */

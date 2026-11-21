@@ -1,0 +1,82 @@
+
+(rules PCB gb-cart
+  (snap_angle 
+    fortyfive_degree
+  )
+  (autoroute_settings
+    (fanout off)
+    (autoroute on)
+    (postroute on)
+    (vias on)
+    (via_costs 50)
+    (plane_via_costs 5)
+    (start_ripup_costs 100)
+    (start_pass_no 2902)
+    (layer_rule F.Cu
+      (active on)
+      (preferred_direction vertical)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 2.2)
+    )
+    (layer_rule B.Cu
+      (active on)
+      (preferred_direction horizontal)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.8)
+    )
+  )
+  (rule
+    (width 250.0)
+    (clear 200.0)
+    (clear 125.0 (type smd_to_turn_gap))
+    (clear 50.0 (type smd_smd))
+  )
+  (padstack "Via[0-1]_800:400_um"
+    (shape
+      (circle F.Cu 800.0 0.0 0.0)
+    )
+    (shape
+      (circle B.Cu 800.0 0.0 0.0)
+    )
+    (attach off)
+  )
+  (via 
+    "Via[0-1]_800:400_um" "Via[0-1]_800:400_um" default
+  )
+  (via 
+    "Via[0-1]_800:400_um-kicad_default" "Via[0-1]_800:400_um" "kicad_default"
+  )
+  (via_rule
+    default "Via[0-1]_800:400_um"
+  )
+  (via_rule
+    "kicad_default" "Via[0-1]_800:400_um-kicad_default"
+  )
+  (class default
+    (clearance_class default)
+    (via_rule default)
+    (rule
+      (width 250.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class "kicad_default"
+    VCC "unconnected-(U2-CLK-Pad2)" WR RD "unconnected-(U2-CS-Pad5)" A0 A1 A2
+    A3 A4 A5 A6 A7 A8 A9 A10
+    A11 A12 A13 A14 A15 D0 D1 D2
+    D3 D4 D5 D6 D7 RESET AUDIO GND
+    TDI TMS TDO TCK "unconnected-(U1-I{slash}O-Pad2)" "unconnected-(U1-I{slash}O-Pad3)" "unconnected-(U1-I{slash}O{slash}PD1-Pad5)" "unconnected-(U1-I{slash}O-Pad6)"
+    "unconnected-(U1-I{slash}O-Pad8)" "unconnected-(U1-I{slash}O-Pad10)" "unconnected-(U1-I{slash}O-Pad11)" FA15 FA16 FA18 FWE FA17
+    FA14 "unconnected-(U1-I{slash}O{slash}GCLK3-Pad35)" "unconnected-(U1-I{slash}GCLK1-Pad37)" "unconnected-(U1-I{slash}OE1{slash}Vpp-Pad38)" "unconnected-(U1-I{slash}O-Pad42)" "unconnected-(U1-I{slash}O-Pad43)" "unconnected-(U1-I{slash}O-Pad44)"
+    (clearance_class "kicad_default")
+    (via_rule kicad_default)
+    (rule
+      (width 250.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+)

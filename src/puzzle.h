@@ -33,6 +33,9 @@ extern uint8_t empty;                                  /* white cells without a 
 /* The group (size and difficulty) of puzzle k. */
 uint8_t puzzle_group(uint8_t k);
 
+/* Puzzle k's number within its group, from 1: what the player sees. */
+uint8_t puzzle_number(uint8_t k);
+
 /* Loads puzzle k (0-based) with only the given digits filled in. */
 void puzzle_load(uint8_t k);
 

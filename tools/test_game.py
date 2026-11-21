@@ -2,7 +2,8 @@
 """Plays the ROM in PyBoy the way a player would and checks the game.
 
 0. The start screen: exact four-colour artwork, centered blinking prompt,
-   music from the fade-in and START to the title, on DMG and Color.
+   music from the fade-in and START to the title, on DMG and Color. The
+   title's cards and the grid's cursor, to the page after past its edge.
 1. Every puzzle, in order: the puzzle in memory (cells, givens, sums, runs)
    against src/puzzles.c and against the .puz files themselves, the board
    on screen tile by tile, and then the puzzle solved with the D-pad and the
@@ -37,6 +38,7 @@ import gen_puzzles  # noqa: E402
 WIN_MAP, BG_MAP = 0x9C00, 0x9800
 PUZZLE_COUNT = int(re.search(r"#define PUZZLE_COUNT (\d+)", (ROOT / "src/puzzles.h").read_text()).group(1))
 PANEL_CLOSED = 136
+PER_PAGE = 20                                    # menu.c: the grid's cells a page
 failures: list[str] = []
 
 
@@ -439,12 +441,34 @@ def splash_test(rom: str) -> None:
         game.to_screen("start")
         check(on_title(game), f"{mode}: START did not lead to the title's cards")
         check(game.reg(0xFF26) & 6, f"{mode}: music stopped after START")
-        current = game.byte("current")
-        game.press("left", after=4)         # 6x6 *, no puzzles yet
-        game.press("a", after=30)
-        check(on_title(game) and game.byte("current") == current,
-              f"{mode}: a group without puzzles opened")
         game.stop()
+
+
+def menu_test(rom: str) -> None:
+    """The title's cards, a size a row and a difficulty a column (6x6 across
+    its row), and the grid's rows of five, past the edge to the page after."""
+    text = (ROOT / "src/puzzles.c").read_text()
+    first, count = c_array(text, "group_first"), c_array(text, "group_count")
+    game = Game(rom)
+    game.boot()
+    for key in ("left", "down", "right", "up", "down"):   # 6x6 is the whole row: down keeps the column
+        game.press(key, after=4)
+    game.to_screen("a")                          # 7x7 ***
+    game.presses("right", 4, after=4)
+    game.press("down", after=4)
+    game.to_screen("a")
+    want = first[2] + (9 if count[2] > 9 else 4)
+    check(game.byte("current") == want, f"menu: puzzle {game.byte('current') + 1} opened, want {want + 1}")
+    game.stop()
+    game = Game(rom)
+    game.boot()
+    game.to_screen("a")                          # 6x6 **
+    game.presses("right", 4, after=4)
+    game.press("right", after=40)                # past the row's end; a page takes frames to draw
+    game.to_screen("a")
+    want = PER_PAGE if count[0] > PER_PAGE else 0
+    check(game.byte("current") == first[0] + want, f"menu: right past the edge opened puzzle {game.byte('current') + 1}, want {want + 1}")
+    game.stop()
 
 
 def full_run(rom: str, model: list[dict]) -> None:
@@ -557,6 +581,8 @@ def main() -> int:
     model = load_model()
     print("start screen")
     splash_test(rom)
+    print("menus")
+    menu_test(rom)
     print(f"full run: {len(model)} puzzles")
     full_run(rom, model)
     print("quit")

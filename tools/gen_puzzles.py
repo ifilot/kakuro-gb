@@ -13,10 +13,11 @@ should one have more solutions, givens are added from the stored solution
 until only one remains, and reported on stdout.
 
 The puzzles are ordered by size, then by difficulty (stars), then by their
-original number, and numbered 1..N in that order. The puzzles of one size
-and difficulty form a group, a card in the menu: GROUPS lists them, in the
-menu's order (a 3x2 grid, a size a row); a group without puzzles yet is
-shown as coming.
+original number, and stored in that order. The puzzles of one size and
+difficulty form a group, a card in the menu: GROUPS lists them in the
+menu's order, a size a row and a difficulty a column; a size with a single
+group has one card across the row. Every group must have puzzles. In the
+game a puzzle is numbered within its group, from 1.
 
 Encoding, per puzzle at puzzle_data + puzzle_offset[k]: the inner
 (n-1)x(n-1) grid (rows and columns 1..n-1) as nibbles, high nibble first, 0
@@ -24,7 +25,7 @@ black and 1-9 the solution digit, padded to a whole byte; then the number of
 givens and their indices in that inner grid. The grid size n and the stars
 come from the group.
 
-  python3 tools/gen_puzzles.py
+  python3 tools/gen_puzzles.py [source directory]   (default assets/puzzles)
 """
 from __future__ import annotations
 
@@ -38,7 +39,7 @@ SOURCE = ROOT / "assets/puzzles"
 OUTPUT = ROOT / "src/puzzles.h"
 LIMIT = 400                       # solutions enumerated per round of adding givens
 MAX_N = 8                         # the largest grid, with the sums (MAX_N in src/puzzle.h)
-GROUPS = [(6, 1), (6, 2), (7, 2), (7, 3), (8, 2), (8, 3)]   # (size, stars), sorted
+GROUPS = [(6, 2), (7, 2), (7, 3), (8, 2), (8, 3)]   # (size, stars), sorted
 
 # combos[(k, s)]: bit masks (bit d = digit d) of k distinct digits 1-9 summing to s
 COMBOS: dict[tuple[int, int], list[int]] = {}
@@ -183,7 +184,8 @@ def c_bytes(data, indent="    ", per_line=16):
 
 def main() -> int:
     puzzles = []
-    for path in sorted(SOURCE.glob("*.puz")):
+    source = Path(sys.argv[1]) if len(sys.argv) > 1 else SOURCE
+    for path in sorted(source.glob("*.puz")):
         try:
             p = Puzzle(path)
         except ValueError as e:
@@ -207,8 +209,13 @@ def main() -> int:
     groups: list[list[int]] = []                       # [n, stars, first, count]
     for n, stars in GROUPS:
         members = [k for k, p in enumerate(puzzles) if (p.n, p.stars) == (n, stars)]
-        first = members[0] if members else sum(1 for p in puzzles if (p.n, p.stars) < (n, stars))
-        groups.append([n, stars, first, len(members)])
+        if not members:
+            raise SystemExit(f"{n}x{n} with {stars} stars: no puzzles (GROUPS)")
+        if len(members) > 99:
+            raise SystemExit(f"{n}x{n} with {stars} stars: {len(members)} puzzles, at most 99")
+        groups.append([n, stars, members[0], len(members)])
+    if len(puzzles) > 255:
+        raise SystemExit(f"{len(puzzles)} puzzles, at most 255 (an 8-bit index)")
 
     data, offsets = bytearray(), []
     for p in puzzles:
@@ -241,7 +248,7 @@ def main() -> int:
     OUTPUT.with_suffix(".c").write_text("\n".join(source))
     print(f"wrote {OUTPUT.relative_to(ROOT)} and .c: {len(puzzles)} puzzles in {len(groups)} groups, {len(data)} bytes")
     for n, stars, first, count in groups:
-        print(f"  {n}x{n} {'*' * stars:5} " + (f"puzzles {first + 1}-{first + count}" if count else "none yet"))
+        print(f"  {n}x{n} {'*' * stars:5} {count} puzzles")
     return 0
 
 

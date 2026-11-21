@@ -136,40 +136,67 @@ uint8_t splash_screen(void)
 
 /* --- title ---------------------------------------------------------------- */
 
-/* The logo in the border, and under it the groups as cards, two to a row
- * (a size a row): the size as a board cell with a given digit, the stars
- * out of three, and a bar of the puzzles solved (light grey once all are;
- * SOON for a group without puzzles yet). The version at the bottom. */
-#define CARD_X     1                        /* map tiles; a card's canvas is 9 x 3 */
+/* The logo in the border, and under it the groups as cards: a size a row,
+ * a difficulty a column (the fewer stars left), and a size with a single
+ * group one card across the row. A card has the size as a board cell with
+ * a given digit, the stars out of three, and a bar of the puzzles solved
+ * (light grey once all are). The version at the bottom. */
+#define CARD_X     1                        /* map tiles; a card's canvas is 9 x 3, a wide one 18 x 3 */
 #define CARD_Y     6
+#define CARD_ROWS  3                        /* sizes 6 to 8 */
 #define LINE_Y     16                       /* the bottom line; the border's bottom is row 17 */
 #define T_SUBTITLE M_FREE_TITLE             /* 10 tiles */
-#define T_CARDS    (T_SUBTITLE + 10)        /* 27 tiles a card */
-#define T_LINE     (T_CARDS + 27 * GROUP_COUNT)    /* 18 */
+#define T_CARDS    (T_SUBTITLE + 10)        /* 27 tiles a column of a row */
+#define T_LINE     (T_CARDS + 27 * 2 * CARD_ROWS)  /* 18 */
+#define NO_CARD    0xFF
 
-#if GROUP_COUNT != 6
-#error "the title has a 3x2 grid of groups"
-#endif
-
-/* The card's background: 70 x 22 dots with rounded corners, from (1, 1). */
-static void card_begin(uint8_t shade)
+static uint8_t card_row(uint8_t g)
 {
-    canvas_begin(9, 3, C_BLACK);
-    canvas_fill(1, 1, 70, 22, shade);
-    canvas_fill(1, 1, 1, 1, C_BLACK);
-    canvas_fill(70, 1, 1, 1, C_BLACK);
-    canvas_fill(1, 22, 1, 1, C_BLACK);
-    canvas_fill(70, 22, 1, 1, C_BLACK);
+    return group_n[g] - 6;
 }
 
-/* "14/20" at the card's right edge, and the bar up to it. */
-static void card_bar(uint8_t solved, uint8_t count)
+/* The second group of its size: the right column. */
+static uint8_t card_col(uint8_t g)
+{
+    return g && group_n[g - 1] == group_n[g];
+}
+
+/* The only group of its size: across the row. */
+static uint8_t card_wide(uint8_t g)
+{
+    return !card_col(g) && !(g + 1 < GROUP_COUNT && group_n[g + 1] == group_n[g]);
+}
+
+/* The group whose card covers row r, column c; NO_CARD for none. */
+static uint8_t card_at(uint8_t r, uint8_t c)
+{
+    uint8_t g;
+    for (g = 0; g < GROUP_COUNT; g++)
+        if (card_row(g) == r && (card_wide(g) || card_col(g) == c))
+            return g;
+    return NO_CARD;
+}
+
+/* The card's background: w tiles by 3, with rounded corners, from (1, 1). */
+static void card_begin(uint8_t w, uint8_t shade)
+{
+    uint8_t x1 = w * 8 - 2;
+    canvas_begin(w, 3, C_BLACK);
+    canvas_fill(1, 1, x1, 22, shade);
+    canvas_fill(1, 1, 1, 1, C_BLACK);
+    canvas_fill(x1, 1, 1, 1, C_BLACK);
+    canvas_fill(1, 22, 1, 1, C_BLACK);
+    canvas_fill(x1, 22, 1, 1, C_BLACK);
+}
+
+/* "14/20" at the card's right edge (dot x1), and the bar up to it. */
+static void card_bar(uint8_t x1, uint8_t solved, uint8_t count)
 {
     uint8_t w;
     char *p = put_num(text, solved, 0);
     *p++ = '/';
     *put_num(p, count, 0) = 0;
-    w = 67 - canvas_tiny_width(text);
+    w = x1 - canvas_tiny_width(text);
     canvas_tiny(w, 16, text, C_BLACK);
     w -= 25 + 3;
     canvas_fill(25, 16, w, 5, C_BLACK);
@@ -184,8 +211,8 @@ static const char three_stars[] = "^^^";
 static void group_card(uint8_t g)
 {
     uint8_t count = group_count[g], solved = best_solved(group_first[g], count);
-    uint8_t done = count && solved == count;
-    card_begin(done ? C_LIGHT : C_WHITE);
+    uint8_t done = solved == count, w = card_wide(g) ? 18 : 9;
+    card_begin(w, done ? C_LIGHT : C_WHITE);
     canvas_fill(3, 3, 18, 18, C_BLACK);     /* the cell, with the board's lines */
     canvas_fill(4, 4, 16, 16, C_LIGHT);
     text[0] = (char)('0' + group_n[g]);
@@ -197,21 +224,21 @@ static void group_card(uint8_t g)
     canvas_text(25, 4, text, C_BLACK);
     canvas_text(45, 4, three_stars, done ? C_WHITE : C_LIGHT);
     canvas_text(45, 4, three_stars + 3 - group_stars[g], C_DARK);
-    if (count)
-        card_bar(solved, count);
-    else
-        canvas_tiny(25, 16, "SOON", C_DARK);
-    canvas_show(T_CARDS + 27 * g, CARD_X + 9 * (g & 1), CARD_Y + 3 * (g >> 1));
+    card_bar(w * 8 - 5, solved, count);
+    canvas_show(T_CARDS + 54 * card_row(g) + 27 * card_col(g),
+                CARD_X + 9 * card_col(g), CARD_Y + 3 * card_row(g));
 }
 
-static void title_cursor(uint8_t k)
+static void title_cursor(uint8_t g)
 {
-    brackets((CARD_X + 9 * (k & 1)) * 8 + 1, (CARD_Y + 3 * (k >> 1)) * 8 + 1, 70, 22);
+    brackets((CARD_X + 9 * card_col(g)) * 8 + 1, (CARD_Y + 3 * card_row(g)) * 8 + 1,
+             card_wide(g) ? 142 : 70, 22);
 }
 
 uint8_t title_screen(void)
 {
-    uint8_t g, k, choice = puzzle_group(current);
+    uint8_t g, k, r, choice = puzzle_group(current);
+    uint8_t column = card_col(choice);      /* kept on a wide card, for up and down */
     char *p;
 
     menu_begin();
@@ -236,26 +263,26 @@ uint8_t title_screen(void)
     for (;;) {
         menu_frame();
         if (repeated & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) {
-            k = choice;
-            if (repeated & (J_LEFT | J_RIGHT))
-                k ^= 1;
-            else if (repeated & J_UP) {
-                if (k >= 2)
-                    k -= 2;
-            } else if (k + 2 < GROUP_COUNT)
-                k += 2;
-            if (k == choice) {
+            r = card_row(choice);
+            k = NO_CARD;
+            if (repeated & (J_LEFT | J_RIGHT)) {
+                if (!card_wide(choice))
+                    k = card_at(r, column ^ 1);
+            } else if (repeated & J_UP) {
+                if (r)
+                    k = card_at(r - 1, column);
+            } else if (r + 1 < CARD_ROWS)
+                k = card_at(r + 1, column);
+            if (k == NO_CARD) {
                 sfx(SFX_BUMP);
                 continue;
             }
+            if (!card_wide(k))
+                column = card_col(k);
             choice = k;
             title_cursor(choice);
             sfx(SFX_MOVE);
         } else if (pressed & (J_A | J_START)) {
-            if (!group_count[choice]) {
-                sfx(SFX_BUMP);
-                continue;
-            }
             sfx(SFX_SELECT);
             if (puzzle_group(current) != choice)
                 current = group_first[choice];
@@ -266,37 +293,56 @@ uint8_t title_screen(void)
 
 /* --- puzzle grid ---------------------------------------------------------- */
 
-/* The puzzles of the group as a board of cells, PER_ROW to a row (solved
- * ones light grey like given digits, with a check mark); the
- * chosen one's preview beside it, a tile a cell, and its details below. */
+/* The puzzles of the group as a board of cells, a page of PER_PAGE,
+ * PER_ROW to a row (solved ones light grey like given digits, with a check
+ * mark) and numbered within the group; under them a dot a page, when there
+ * are more. Past the left or right edge is the page before or after. The
+ * chosen puzzle's preview beside the cells, a tile a cell, and its details
+ * below. */
 #define PER_ROW   5
+#define PER_PAGE  20
 #define CELLS_X   1
 #define CELLS_Y   3
+#define PAGE_Y    11
 #define PREVIEW_X 12
 #define INFO_Y    12
 #define T_GHEAD   M_FREE                    /* 40 tiles */
 #define T_CELLS   (T_GHEAD + 40)            /* 80 */
 #define T_INFO    (T_CELLS + 80)            /* 60 */
 #define T_GKEYS   (T_INFO + 60)             /* 20 */
+#define T_PAGES   (T_GKEYS + 20)            /* 10 */
 
-static void grid_cells(uint8_t first, uint8_t count)
+/* Page `page` of the group's cells, and the dots under them. */
+static void grid_page(uint8_t first, uint8_t count, uint8_t page)
 {
-    uint8_t j, x, y;
+    uint8_t j, x, y, k, pages = (count + PER_PAGE - 1) / PER_PAGE;
     canvas_begin(10, 8, C_BLACK);
-    for (j = 0; j < count; j++) {
+    for (j = 0; j < PER_PAGE && page * PER_PAGE + j < count; j++) {
+        k = first + page * PER_PAGE + j;
         x = (j % PER_ROW) * 16;
         y = (j / PER_ROW) * 16;
-        canvas_fill(x + 1, y + 1, 15, 15, best_time(first + j) ? C_LIGHT : C_WHITE);
-        *put_num(text, first + j + 1, 0) = 0;
+        canvas_fill(x + 1, y + 1, 15, 15, best_time(k) ? C_LIGHT : C_WHITE);
+        *put_num(text, page * PER_PAGE + j + 1, 0) = 0;
         canvas_tiny(x + (16 - canvas_tiny_width(text)) / 2, y + 7, text, C_BLACK);
-        if (best_time(first + j))           /* a check mark, top right */
+        if (best_time(k))                   /* a check mark, top right */
             canvas_tiny(x + 9, y + 2, "]", C_DARK);
     }
+    /* Black while the tiles go up, on a page turn: no half old, half new
+     * cells; canvas_show() puts the map back after the tiles. */
+    fill_bkg_rect(CELLS_X, CELLS_Y, 10, 8, M_BLACK);
     canvas_show(T_CELLS, CELLS_X, CELLS_Y);
+    if (pages < 2)
+        return;
+    canvas_begin(10, 1, C_BLACK);           /* 4-dot squares, 4 apart, centred under the cells */
+    x = (80 + 1 - pages * 8 + 4) / 2;
+    for (j = 0; j < pages; j++, x += 8)
+        canvas_fill(x, 2, 4, 4, j == page ? C_WHITE : C_DARK);
+    canvas_show(T_PAGES, CELLS_X, PAGE_Y);
 }
 
 static void grid_cursor(uint8_t j)
 {
+    j %= PER_PAGE;
     brackets(CELLS_X * 8 + (j % PER_ROW) * 16 + 1, CELLS_Y * 8 + (j / PER_ROW) * 16 + 1, 15, 15);
 }
 
@@ -327,7 +373,7 @@ static void grid_info(uint8_t k)
 
     canvas_begin(20, 3, C_BLACK);
     p = put_str(text, "PUZZLE ");
-    *put_num(p, k + 1, 0) = 0;
+    *put_num(p, puzzle_number(k), 0) = 0;
     canvas_text(4, 0, text, C_WHITE);
     canvas_tiny(4, 11, "BEST", C_LIGHT);
     *put_best(text, best) = 0;
@@ -340,7 +386,8 @@ static void grid_info(uint8_t k)
 uint8_t grid_screen(void)
 {
     uint8_t g = puzzle_group(current), first = group_first[g], count = group_count[g];
-    uint8_t j = current - first, k, rest = 0;
+    uint8_t pages = (count + PER_PAGE - 1) / PER_PAGE;
+    uint8_t j = current - first, k, c, page, rest = 0;
 
     menu_begin();
     canvas_begin(20, 2, C_BLACK);
@@ -351,7 +398,7 @@ uint8_t grid_screen(void)
     *put_solved(text, best_solved(first, count), count) = 0;
     canvas_tiny(157 - canvas_tiny_width(text), 5, text, C_LIGHT);
     canvas_show(T_GHEAD, 0, 0);
-    grid_cells(first, count);
+    grid_page(first, count, j / PER_PAGE);
     attr_bkg(PREVIEW_X, CELLS_Y, 8, 8, CPAL_CELL);
     canvas_begin(20, 1, C_BLACK);
     canvas_tiny(3, 1, "A: PLAY   B: BACK", C_LIGHT);
@@ -367,19 +414,32 @@ uint8_t grid_screen(void)
         if (rest && !--rest)
             grid_info(first + j);
         if (repeated & (J_UP | J_DOWN | J_LEFT | J_RIGHT)) {
+            page = j / PER_PAGE;
+            c = j % PER_PAGE;
             k = j;
-            if (repeated & J_LEFT)
-                k = j ? j - 1 : count - 1;
-            else if (repeated & J_RIGHT)
-                k = j + 1 < count ? j + 1 : 0;
-            else if (repeated & J_UP)
-                k = j >= PER_ROW ? j - PER_ROW : j;
-            else if (j + PER_ROW < count)
+            if (repeated & J_LEFT) {
+                if (c % PER_ROW)
+                    k = j - 1;
+                else                        /* the row's end on the page before */
+                    k = (page ? page - 1 : pages - 1) * PER_PAGE + c + PER_ROW - 1;
+            } else if (repeated & J_RIGHT) {
+                if ((c + 1) % PER_ROW && j + 1 < count)
+                    k = j + 1;
+                else                        /* the row's start on the page after */
+                    k = (page + 1 < pages ? page + 1 : 0) * PER_PAGE + c - c % PER_ROW;
+            } else if (repeated & J_UP) {
+                if (c >= PER_ROW)
+                    k = j - PER_ROW;
+            } else if (c + PER_ROW < PER_PAGE && j + PER_ROW < count)
                 k = j + PER_ROW;
+            if (k >= count)                 /* a shorter last page */
+                k = count - 1;
             if (k == j) {
                 sfx(SFX_BUMP);
                 continue;
             }
+            if (k / PER_PAGE != page)
+                grid_page(first, count, k / PER_PAGE);
             j = k;
             grid_cursor(j);
             rest = PREVIEW_REST;
@@ -395,4 +455,3 @@ uint8_t grid_screen(void)
         }
     }
 }
-

@@ -26,6 +26,11 @@ uint8_t puzzle_group(uint8_t k)
     return g;
 }
 
+uint8_t puzzle_number(uint8_t k)
+{
+    return k - group_first[puzzle_group(k)] + 1;
+}
+
 /* Walks the run that starts after black cell `head` in steps of `step`
  * (1 across, n down), at most `room` cells to the grid's edge: gives every
  * cell its head and returns the sum and, in *length, the number of cells. */
